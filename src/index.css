@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 195 100% 98%;
+    --foreground: 220 20% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 20%;
+
+    --primary: 195 85% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 35 95% 60%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 195 30% 95%;
+    --muted-foreground: 220 15% 50%;
+
+    --accent: 145 65% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 195 30% 88%;
+    --input: 195 30% 92%;
+    --ring: 195 85% 45%;
+
+    --radius: 1rem;
+    
+    --gradient-playful: linear-gradient(135deg, hsl(195 85% 45%), hsl(145 65% 55%));
+    --gradient-warm: linear-gradient(135deg, hsl(35 95% 60%), hsl(15 90% 65%));
+    --shadow-soft: 0 4px 20px -4px hsl(195 85% 45% / 0.15);
+    --shadow-card: 0 2px 12px -2px hsl(220 20% 20% / 0.08);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 25% 12%;
+    --foreground: 195 30% 95%;
+
+    --card: 220 22% 16%;
+    --card-foreground: 195 30% 95%;
+
+    --popover: 220 22% 16%;
+    --popover-foreground: 195 30% 95%;
+
+    --primary: 195 85% 55%;
+    --primary-foreground: 220 25% 12%;
+
+    --secondary: 35 95% 65%;
+    --secondary-foreground: 220 25% 12%;
+
+    --muted: 220 20% 20%;
+    --muted-foreground: 195 20% 65%;
+
+    --accent: 145 65% 60%;
+    --accent-foreground: 220 25% 12%;
+
+    --destructive: 0 85% 65%;
+    --destructive-foreground: 220 25% 12%;
+
+    --border: 220 20% 24%;
+    --input: 220 20% 22%;
+    --ring: 195 85% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    touch-action: pan-x pan-y;
+  }
+  
+  #root {
+    overscroll-behavior: none;
+  }
+}
