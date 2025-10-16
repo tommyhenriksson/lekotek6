@@ -41,13 +41,14 @@ const AdminTimerSettings = ({ settings, onSave }: AdminTimerSettingsProps) => {
         }
       }
 
-      if (isValid && JSON.stringify(localSettings) !== JSON.stringify(settings)) {
+      if (isValid) {
+        console.log("[AdminTimerSettings] Sparar ändringar till localStorage");
         onSave(localSettings);
       }
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [localSettings, settings, onSave]);
+  }, [localSettings, onSave]);
 
   const addSession = () => {
     const newSession: CleaningSession = {

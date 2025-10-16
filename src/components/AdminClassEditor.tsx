@@ -30,13 +30,12 @@ const AdminClassEditor = ({ classes, onSave }: AdminClassEditorProps) => {
   // Autosave with debounce
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (JSON.stringify(localClasses) !== JSON.stringify(classes)) {
-        onSave(localClasses);
-      }
+      console.log("[AdminClassEditor] Sparar ändringar till localStorage");
+      onSave(localClasses);
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [localClasses, classes, onSave]);
+  }, [localClasses, onSave]);
 
   const addClass = () => {
     const newClass: Class = {

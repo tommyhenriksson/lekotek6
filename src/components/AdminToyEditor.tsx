@@ -187,21 +187,15 @@ const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
     })
   );
 
-  // Sync localToys with toys prop when it changes
-  useEffect(() => {
-    setLocalToys(toys);
-  }, [toys]);
-
   // Autosave with debounce
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (JSON.stringify(localToys) !== JSON.stringify(toys)) {
-        onSave(localToys);
-      }
+      console.log("[AdminToyEditor] Sparar ändringar till localStorage");
+      onSave(localToys);
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [localToys, toys, onSave]);
+  }, [localToys, onSave]);
 
   const addToy = () => {
     const newToy: Toy = {
