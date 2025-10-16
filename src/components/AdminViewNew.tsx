@@ -136,6 +136,8 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
               <div className="space-y-4">
                 <Input
                   type="password"
+                  name="new-password"
+                  autoComplete="new-password"
                   placeholder="Nytt lösenord"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -143,6 +145,8 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
                 />
                 <Input
                   type="password"
+                  name="confirm-password"
+                  autoComplete="new-password"
                   placeholder="Bekräfta lösenord"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -172,6 +176,8 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
             <div className="space-y-4">
               <Input
                 type="password"
+                name="password"
+                autoComplete="current-password"
                 placeholder="Ange lösenord"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -235,6 +241,8 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
           <div className="space-y-3">
             <Input
               type="password"
+              name="new-password"
+              autoComplete="new-password"
               placeholder="Nytt lösenord"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -242,6 +250,8 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
             />
             <Input
               type="password"
+              name="confirm-password"
+              autoComplete="new-password"
               placeholder="Bekräfta lösenord"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
