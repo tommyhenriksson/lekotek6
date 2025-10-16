@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { GraduationCap, List, Settings } from "lucide-react";
+import { ArrowUp, ArrowDown, Settings } from "lucide-react";
 
 type Tab = "borrow" | "borrowed" | "admin";
 
@@ -23,7 +23,7 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
             className="text-sm px-4 py-5 rounded-xl flex-1 max-w-[120px]"
             onClick={() => onTabChange("borrow")}
           >
-            <GraduationCap className="mr-1.5 h-4 w-4" />
+            <ArrowUp className="mr-1.5 h-4 w-4" />
             Låna
           </Button>
           
@@ -33,8 +33,8 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
             className="text-sm px-4 py-5 rounded-xl flex-1 max-w-[120px]"
             onClick={() => onTabChange("borrowed")}
           >
-            <List className="mr-1.5 h-4 w-4" />
-            Utlånade
+            <ArrowDown className="mr-1.5 h-4 w-4" />
+            Lämna
           </Button>
         </div>
         
