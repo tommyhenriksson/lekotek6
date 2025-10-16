@@ -84,12 +84,8 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
 
   const handleExportData = () => {
     try {
-      toast.info("Förbereder export...");
-      // Vänta 3 sekunder för att säkerställa att autosave från alla flikar hinner slutföras
-      setTimeout(() => {
-        downloadDataAsFile();
-        toast.success("Data exporterad!");
-      }, 3000);
+      downloadDataAsFile();
+      toast.success("Data exporterad!");
     } catch (error) {
       toast.error("Kunde inte exportera data");
     }

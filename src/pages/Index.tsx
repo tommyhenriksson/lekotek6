@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Navigation from "@/components/Navigation";
 import BorrowView from "@/components/BorrowView";
 import BorrowedView from "@/components/BorrowedView";
@@ -200,20 +200,20 @@ const Index = () => {
     savePaxPoints(updatedPaxPoints);
   };
 
-  const handleSaveClasses = (newClasses: Class[]) => {
+  const handleSaveClasses = useCallback((newClasses: Class[]) => {
     setClasses(newClasses);
     saveClasses(newClasses);
-  };
+  }, []);
 
-  const handleSaveToys = (newToys: Toy[]) => {
+  const handleSaveToys = useCallback((newToys: Toy[]) => {
     setToys(newToys);
     saveToys(newToys);
-  };
+  }, []);
 
-  const handleSaveTimerSettings = (newSettings: TimerSettings) => {
+  const handleSaveTimerSettings = useCallback((newSettings: TimerSettings) => {
     setTimerSettings(newSettings);
     saveTimerSettings(newSettings);
-  };
+  }, []);
 
   const handleRefreshNotReturned = () => {
     setNotReturnedRecords(loadNotReturnedRecords());
