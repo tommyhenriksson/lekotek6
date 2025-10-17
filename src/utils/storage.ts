@@ -330,49 +330,122 @@ const getWeekNumber = (date: Date): number => {
 
 /**
  * Exporterar ALL app-data som en JSON-sträng.
- * Används för manuella backuper och för att flytta data till andra enheter/appar.
+ * LÄSER ALLTID DIREKT FRÅN localStorage för att garantera senaste datan.
  */
 export const exportAllData = (): string => {
+  console.log("[storage.exportAllData] Läser data DIREKT från localStorage...");
+  
+  // Läs alltid direkt från localStorage (inte från cache eller state)
   const data = loadAppData();
+  
+  console.log("[storage.exportAllData] Antal leksaker i export:", data.toys.length);
+  console.log("[storage.exportAllData] Leksaker:", data.toys.map(t => t.name).join(", "));
+  console.log("[storage.exportAllData] Leksaker med bilder:", data.toys.filter(t => t.image).map(t => `${t.name} (${t.image?.substring(0, 30)}...)`).join(", "));
+  
   return JSON.stringify(data, null, 2);
 };
 
 /**
- * Importerar data från en JSON-sträng och ersätter all befintlig data.
+ * Importerar data från en JSON-sträng med SMART SAMMANFOGNING.
+ * Jämför och sammanfogar data istället för att skriva över allt.
  * Skapar automatiskt en backup innan importen genomförs.
- * Används för att återställa data från backup eller flytta data från annan enhet.
  */
 export const importAllData = (jsonData: string): { success: boolean; error?: string } => {
   try {
-    const newData = JSON.parse(jsonData);
+    const importedData = JSON.parse(jsonData);
     
     // Validera att det är en giltig AppData-struktur
-    if (typeof newData !== 'object' || newData === null) {
+    if (typeof importedData !== 'object' || importedData === null) {
       return { success: false, error: "Ogiltig datastruktur" };
     }
+    
+    console.log("[storage.importAllData] Startar smart import...");
     
     // Skapa backup innan import
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupKey = `lekotek-backup-${timestamp}`;
     localStorage.setItem(backupKey, exportAllData());
+    console.log("[storage.importAllData] Backup skapad:", backupKey);
     
-    // Importera den nya datan
-    saveAppData(newData as AppData);
+    // Läs befintlig data
+    const existingData = loadAppData();
+    
+    // SMART SAMMANFOGNING AV LEKSAKER
+    // Behåll befintliga leksaker och lägg till nya från importen
+    const existingToyIds = new Set(existingData.toys.map(t => t.id));
+    const newToysToAdd = importedData.toys?.filter((t: Toy) => !existingToyIds.has(t.id)) || [];
+    
+    // Uppdatera befintliga leksaker om de finns i importen
+    const updatedToys = existingData.toys.map(existingToy => {
+      const importedToy = importedData.toys?.find((t: Toy) => t.id === existingToy.id);
+      if (importedToy) {
+        // Om leksaken finns i importen, använd den importerade versionen
+        console.log(`[storage.importAllData] Uppdaterar leksak: ${existingToy.name} -> ${importedToy.name}`);
+        return importedToy;
+      }
+      return existingToy;
+    });
+    
+    // Kombinera uppdaterade och nya leksaker
+    const mergedToys = [...updatedToys, ...newToysToAdd];
+    console.log(`[storage.importAllData] Leksaker efter sammanfogning: ${mergedToys.length} (${updatedToys.length} befintliga, ${newToysToAdd.length} nya)`);
+    
+    // SMART SAMMANFOGNING AV KLASSER
+    const existingClassNames = new Set(existingData.classes.map(c => c.name));
+    const newClassesToAdd = importedData.classes?.filter((c: Class) => !existingClassNames.has(c.name)) || [];
+    
+    const updatedClasses = existingData.classes.map(existingClass => {
+      const importedClass = importedData.classes?.find((c: Class) => c.name === existingClass.name);
+      if (importedClass) {
+        console.log(`[storage.importAllData] Uppdaterar klass: ${existingClass.name}`);
+        return importedClass;
+      }
+      return existingClass;
+    });
+    
+    const mergedClasses = [...updatedClasses, ...newClassesToAdd];
+    console.log(`[storage.importAllData] Klasser efter sammanfogning: ${mergedClasses.length}`);
+    
+    // SAMMANFOGAD DATA
+    const mergedData: AppData = {
+      classes: mergedClasses,
+      toys: mergedToys,
+      borrowed: importedData.borrowed || existingData.borrowed,
+      timerSettings: importedData.timerSettings || existingData.timerSettings,
+      paxPoints: importedData.paxPoints || existingData.paxPoints,
+      rastTracking: importedData.rastTracking || existingData.rastTracking,
+      notReturned: importedData.notReturned || existingData.notReturned,
+      notReturnedStats: importedData.notReturnedStats || existingData.notReturnedStats,
+      adminPassword: existingData.adminPassword, // Behåll alltid befintligt lösenord
+      adminPasswordSet: existingData.adminPasswordSet,
+    };
+    
+    // Spara sammanfogad data
+    saveAppData(mergedData);
+    console.log("[storage.importAllData] Import slutförd!");
     
     return { success: true };
   } catch (error) {
+    console.error("[storage.importAllData] Importfel:", error);
     return { success: false, error: "Kunde inte läsa filen. Kontrollera att det är en giltig JSON-fil." };
   }
 };
 
 /**
  * Laddar ner all app-data som en JSON-fil till enheten.
- * Används för att skapa manuella backuper för säkerhetskopiering eller migration.
+ * GARANTERAR att senaste datan från localStorage exporteras.
  */
 export const downloadDataAsFile = (): void => {
+  console.log("[storage.downloadDataAsFile] Startar export...");
+  
+  // Läs alltid direkt från localStorage för att garantera senaste datan
   const data = exportAllData();
+  
   const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
-  const filename = `lekotek-data-${date}.json`;
+  const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '');
+  const filename = `lekotek-data-${date}-${time}.json`;
+  
+  console.log("[storage.downloadDataAsFile] Skapar fil:", filename);
   
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -383,4 +456,6 @@ export const downloadDataAsFile = (): void => {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+  
+  console.log("[storage.downloadDataAsFile] Export slutförd!");
 };

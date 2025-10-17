@@ -84,10 +84,14 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
 
   const handleExportData = () => {
     try {
+      console.log("[AdminViewNew] Exporterar data...");
       downloadDataAsFile();
-      toast.success("Data exporterad!");
+      toast.success("Export genomförd! Kontrollera nedladdningar.", {
+        duration: 3000,
+      });
     } catch (error) {
-      toast.error("Kunde inte exportera data");
+      console.error("[AdminViewNew] Exportfel:", error);
+      toast.error("Kunde inte hämta data från lagringen");
     }
   };
 
@@ -99,16 +103,20 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log("[AdminViewNew] Importerar fil:", file.name);
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
       const result = importAllData(content);
       
       if (result.success) {
-        toast.success("Data importerad! Sidan laddas om...");
+        toast.success("Import genomförd! Befintlig data bevarad. Sidan laddas om...", {
+          duration: 3000,
+        });
         setTimeout(() => {
           window.location.reload();
-        }, 1500);
+        }, 2000);
       } else {
         toast.error(result.error || "Kunde inte importera data");
       }
@@ -278,11 +286,12 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
             Exportera för att spara all tillgänglig data. Importera för att mata in sparad data.
           </p>
           
-          <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning/20 rounded-xl">
-            <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-warning-foreground">
-              <strong>Varning:</strong> Import skriver över all befintlig lokal data. 
-              Vi rekommenderar att du först exporterar en backup.
+          <div className="flex items-start gap-2 p-3 bg-primary/10 border border-primary/20 rounded-xl">
+            <AlertTriangle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+            <p className="text-sm">
+              <strong>Smart import:</strong> Importen jämför och sammanfogar data. 
+              Befintliga leksaker och klasser bevaras, nya läggs till. 
+              En automatisk backup skapas före varje import.
             </p>
           </div>
 
