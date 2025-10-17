@@ -189,12 +189,17 @@ const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
 
   // Autosave with debounce
   useEffect(() => {
+    console.log("[AdminToyEditor] useEffect triggered, antal leksaker:", localToys.length);
     const timeoutId = setTimeout(() => {
-      console.log("[AdminToyEditor] Sparar ändringar till localStorage");
+      console.log("[AdminToyEditor] SPARAR NU till localStorage, antal leksaker:", localToys.length);
+      console.log("[AdminToyEditor] Leksaker som sparas:", localToys.map(t => t.name).join(", "));
       onSave(localToys);
     }, 1000);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      console.log("[AdminToyEditor] Timeout cleared");
+      clearTimeout(timeoutId);
+    };
   }, [localToys, onSave]);
 
   const addToy = () => {

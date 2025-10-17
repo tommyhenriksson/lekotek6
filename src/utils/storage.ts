@@ -135,9 +135,11 @@ export const loadToys = (): Toy[] => {
 };
 
 export const saveToys = (toys: Toy[]): void => {
+  console.log("[storage.saveToys] Sparar leksaker, antal:", toys.length);
   const data = loadAppData();
   data.toys = toys;
   saveAppData(data);
+  console.log("[storage.saveToys] localStorage uppdaterad med leksaker:", toys.map(t => t.name).join(", "));
 };
 
 // ============================================
