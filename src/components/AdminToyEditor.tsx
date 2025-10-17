@@ -174,6 +174,7 @@ const SortableToyItem = ({
 const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
   const [localToys, setLocalToys] = useState<Toy[]>(toys);
   const [toyToDelete, setToyToDelete] = useState<string | null>(null);
+  const [lastSaved, setLastSaved] = useState<string>("");
 
   // Sensors for drag and drop with touch support
   const sensors = useSensors(
@@ -194,6 +195,9 @@ const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
       console.log("[AdminToyEditor] SPARAR NU till localStorage, antal leksaker:", localToys.length);
       console.log("[AdminToyEditor] Leksaker som sparas:", localToys.map(t => t.name).join(", "));
       onSave(localToys);
+      const now = new Date();
+      setLastSaved(`Sparad: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
+      toast.success("Leksaker sparade!");
     }, 1000);
 
     return () => {
@@ -209,25 +213,30 @@ const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
       icon: "🎲",
       quantity: 1,
     };
-    setLocalToys([...localToys, newToy]);
+    console.log("[AdminToyEditor.addToy] Lägger till ny leksak med id:", newToy.id);
+    setLocalToys(prevToys => [...prevToys, newToy]);
   };
 
   const removeToy = (id: string) => {
-    const updated = localToys.filter(t => t.id !== id);
-    setLocalToys(updated);
+    setLocalToys(prevToys => prevToys.filter(t => t.id !== id));
     setToyToDelete(null);
     toast.success("Leksak borttagen!");
   };
 
   const updateToy = (id: string, field: keyof Toy, value: string | number) => {
-    const updated = localToys.map(t => 
-      t.id === id ? { ...t, [field]: value } : t
-    );
-    setLocalToys(updated);
+    console.log(`[AdminToyEditor.updateToy] Uppdaterar leksak ${id}, fält: ${field}, värde:`, value);
+    setLocalToys(prevToys => {
+      const updated = prevToys.map(t => 
+        t.id === id ? { ...t, [field]: value } : t
+      );
+      console.log("[AdminToyEditor.updateToy] Uppdaterade leksaker:", updated.map(t => `${t.name}(${t.id})`).join(", "));
+      return updated;
+    });
   };
 
   const handleImageUpload = (toyId: string, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    console.log("[AdminToyEditor.handleImageUpload] Fil vald för leksak:", toyId, "Filnamn:", file?.name);
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
@@ -238,6 +247,7 @@ const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
+      console.log("[AdminToyEditor.handleImageUpload] Bild konverterad till base64, längd:", base64.length);
       updateToy(toyId, "image", base64);
     };
     reader.readAsDataURL(file);
@@ -265,7 +275,10 @@ const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Redigera Leksaker</h3>
-        <span className="text-xs text-muted-foreground">Sparas automatiskt</span>
+        <div className="flex flex-col items-end">
+          <span className="text-xs text-muted-foreground">Sparas automatiskt</span>
+          {lastSaved && <span className="text-xs text-green-600 font-medium">{lastSaved}</span>}
+        </div>
       </div>
 
       <DndContext
