@@ -208,6 +208,7 @@ const Index = () => {
   const handleSaveToys = useCallback((newToys: Toy[]) => {
     console.log("[Index.handleSaveToys] Sparar leksaker, antal:", newToys.length);
     console.log("[Index.handleSaveToys] Leksaker:", newToys.map(t => t.name).join(", "));
+    console.log("[Index.handleSaveToys] Leksaker med bilder:", newToys.filter(t => t.image).map(t => `${t.name} (${t.image?.substring(0, 30)}...)`).join(", "));
     setToys(newToys);
     saveToys(newToys);
     console.log("[Index.handleSaveToys] localStorage uppdaterad");

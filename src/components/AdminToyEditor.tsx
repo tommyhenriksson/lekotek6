@@ -188,22 +188,13 @@ const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
     })
   );
 
-  // Autosave with debounce
+  // Autosave - spara direkt utan fördröjning för att säkerställa att export alltid har senaste data
   useEffect(() => {
-    console.log("[AdminToyEditor] useEffect triggered, antal leksaker:", localToys.length);
-    const timeoutId = setTimeout(() => {
-      console.log("[AdminToyEditor] SPARAR NU till localStorage, antal leksaker:", localToys.length);
-      console.log("[AdminToyEditor] Leksaker som sparas:", localToys.map(t => t.name).join(", "));
-      onSave(localToys);
-      const now = new Date();
-      setLastSaved(`Sparad: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
-      toast.success("Leksaker sparade!");
-    }, 1000);
-
-    return () => {
-      console.log("[AdminToyEditor] Timeout cleared");
-      clearTimeout(timeoutId);
-    };
+    console.log("[AdminToyEditor] Sparar leksaker direkt, antal:", localToys.length);
+    console.log("[AdminToyEditor] Leksaker som sparas:", localToys.map(t => t.name).join(", "));
+    onSave(localToys);
+    const now = new Date();
+    setLastSaved(`Sparad: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
   }, [localToys, onSave]);
 
   const addToy = () => {
