@@ -63,17 +63,17 @@ const AdminPaxPoints = ({ classes, paxPoints }: AdminPaxPointsProps) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 px-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={goToPreviousWeek}
-                className="rounded-xl"
+                className="rounded-xl w-full sm:w-auto"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Föregående vecka
               </Button>
-              <div className="text-center">
+              <div className="text-center flex-1">
                 <p className="font-semibold text-lg">
                   Vecka {viewWeek}, {viewYear}
                 </p>
@@ -92,7 +92,7 @@ const AdminPaxPoints = ({ classes, paxPoints }: AdminPaxPointsProps) => {
                 variant="outline"
                 size="sm"
                 onClick={goToNextWeek}
-                className="rounded-xl"
+                className="rounded-xl w-full sm:w-auto"
               >
                 Nästa vecka
                 <ChevronRight className="h-4 w-4" />
