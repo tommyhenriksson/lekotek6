@@ -55,8 +55,8 @@ export const DEFAULT_TOYS: Toy[] = [
 
 const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   sessions: [
-    { id: "session-1", name: "Rast 1", startTime: "09:00", endTime: "11:30", enabled: true },
-    { id: "session-2", name: "Rast 2", startTime: "13:00", endTime: "15:30", enabled: true },
+    { id: "session-1", name: "Rast 1", startTime: "09:30", endTime: "10:10", enabled: true },
+    { id: "session-2", name: "Rast 2", startTime: "11:30", endTime: "12:10", enabled: true },
   ],
   timerType: 'digital',
   warningMinutes: 15,
