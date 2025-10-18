@@ -142,6 +142,7 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
               <h2 className="text-2xl font-bold">Välkommen!</h2>
               <p className="text-muted-foreground">Skapa ditt admin-lösenord</p>
               <div className="space-y-4">
+                <input type="text" name="username" value="Lekotek" autoComplete="username" style={{ display: 'none' }} readOnly />
                 <Input
                   type="password"
                   name="new-password"
@@ -182,6 +183,7 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
             <Lock className="h-16 w-16 mx-auto text-primary" />
             <h2 className="text-2xl font-bold">Admin-inloggning</h2>
             <div className="space-y-4">
+              <input type="text" name="username" value="Lekotek" autoComplete="username" style={{ display: 'none' }} readOnly />
               <Input
                 type="password"
                 name="password"
@@ -247,6 +249,7 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
             <h3 className="text-lg font-semibold">Ändra lösenord</h3>
           </div>
           <div className="space-y-3">
+            <input type="text" name="username" value="Lekotek" autoComplete="username" style={{ display: 'none' }} readOnly />
             <Input
               type="password"
               name="new-password"
