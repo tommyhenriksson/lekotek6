@@ -211,12 +211,12 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
       <h2 className="text-xl font-bold mb-4 text-foreground">Admin-panel</h2>
       
       <Tabs defaultValue="classes" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-4">
-          <TabsTrigger value="classes">Elever</TabsTrigger>
-          <TabsTrigger value="toys">Leksaker</TabsTrigger>
-          <TabsTrigger value="timer">Timer</TabsTrigger>
-          <TabsTrigger value="pax">Poäng</TabsTrigger>
-          <TabsTrigger value="not-returned">Ej inlämnat</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 mb-4 gap-1">
+          <TabsTrigger value="classes" className="text-xs sm:text-sm">Elever</TabsTrigger>
+          <TabsTrigger value="toys" className="text-xs sm:text-sm">Leksaker</TabsTrigger>
+          <TabsTrigger value="timer" className="text-xs sm:text-sm">Timer</TabsTrigger>
+          <TabsTrigger value="pax" className="text-xs sm:text-sm">Poäng</TabsTrigger>
+          <TabsTrigger value="not-returned" className="text-xs sm:text-sm">Ej inlämnat</TabsTrigger>
         </TabsList>
         
         <TabsContent value="classes">
