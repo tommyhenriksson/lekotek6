@@ -189,6 +189,12 @@ export const saveTimerSettings = (settings: TimerSettings): void => {
   saveAppData(data);
 };
 
+export const resetTimerSettingsToDefault = (): void => {
+  const data = loadAppData();
+  data.timerSettings = DEFAULT_TIMER_SETTINGS;
+  saveAppData(data);
+};
+
 // ============================================
 // PAX-POÄNG
 // ============================================

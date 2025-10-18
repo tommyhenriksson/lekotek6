@@ -37,7 +37,23 @@ const Index = () => {
     setClasses(loadClasses());
     setToys(loadToys());
     setBorrowedItems(loadBorrowedItems());
-    setTimerSettings(loadTimerSettings());
+    
+    // Load and migrate timer settings
+    const settings = loadTimerSettings();
+    // Update session times to new defaults if they have old values
+    const updatedSessions = settings.sessions.map(session => {
+      if (session.id === "session-1" && (session.startTime !== "09:30" || session.endTime !== "10:10")) {
+        return { ...session, startTime: "09:30", endTime: "10:10" };
+      }
+      if (session.id === "session-2" && (session.startTime !== "11:30" || session.endTime !== "12:10")) {
+        return { ...session, startTime: "11:30", endTime: "12:10" };
+      }
+      return session;
+    });
+    const migratedSettings = { ...settings, sessions: updatedSessions };
+    setTimerSettings(migratedSettings);
+    saveTimerSettings(migratedSettings);
+    
     setPaxPoints(loadPaxPoints());
     setNotReturnedRecords(loadNotReturnedRecords());
   }, []);
