@@ -174,7 +174,6 @@ const SortableToyItem = ({
 const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
   const [localToys, setLocalToys] = useState<Toy[]>(toys);
   const [toyToDelete, setToyToDelete] = useState<string | null>(null);
-  const [lastSaved, setLastSaved] = useState<string>("");
 
   // Sensors for drag and drop with touch support
   const sensors = useSensors(
@@ -193,8 +192,6 @@ const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
     console.log("[AdminToyEditor] Sparar leksaker direkt, antal:", localToys.length);
     console.log("[AdminToyEditor] Leksaker som sparas:", localToys.map(t => t.name).join(", "));
     onSave(localToys);
-    const now = new Date();
-    setLastSaved(`Sparad: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
   }, [localToys, onSave]);
 
   const addToy = () => {
@@ -266,10 +263,7 @@ const AdminToyEditor = ({ toys, onSave }: AdminToyEditorProps) => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Redigera Leksaker</h3>
-        <div className="flex flex-col items-end">
-          <span className="text-xs text-muted-foreground">Sparas automatiskt</span>
-          {lastSaved && <span className="text-xs text-green-600 font-medium">{lastSaved}</span>}
-        </div>
+        <span className="text-xs text-muted-foreground">Sparas automatiskt</span>
       </div>
 
       <DndContext
