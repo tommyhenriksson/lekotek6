@@ -11,7 +11,11 @@ const MAIN_STORAGE_KEY = "fritidsAppData";
 // ============================================
 // DATASTRUKTUR FÖR ALL APP-DATA
 // ============================================
+// VIKTIGT: Version används för att hantera migreringar vid framtida uppdateringar
+const CURRENT_DATA_VERSION = 2; // Öka detta nummer när datastrukturen ändras
+
 interface AppData {
+  version: number; // För att hantera migreringar
   classes: Class[];
   toys: Toy[];
   borrowed: BorrowedItem[];
@@ -71,21 +75,91 @@ const DEFAULT_TIMER_SETTINGS: TimerSettings = {
 // Dessa funktioner hanterar den centrala lagringsnyckeln för vardagligt bevarande.
 
 /**
+ * Migrerar data från äldre versioner till nuvarande struktur.
+ * Detta säkerställer att befintlig data bevaras vid uppdateringar.
+ */
+const migrateData = (data: any): AppData => {
+  console.log("[storage.migrateData] Kontrollerar dataversion:", data.version || 'ingen version');
+  
+  // Om data saknar version, sätt version 1
+  if (!data.version) {
+    data.version = 1;
+  }
+  
+  // Migrering från version 1 till 2: Uppdatera timer-standardtider
+  if (data.version === 1) {
+    console.log("[storage.migrateData] Migrerar från version 1 till 2");
+    if (data.timerSettings?.sessions) {
+      data.timerSettings.sessions = data.timerSettings.sessions.map((session: any) => {
+        if (session.id === "session-1" && (session.startTime !== "09:30" || session.endTime !== "10:10")) {
+          console.log("[storage.migrateData] Uppdaterar Rast 1 till nya tider");
+          return { ...session, startTime: "09:30", endTime: "10:10" };
+        }
+        if (session.id === "session-2" && (session.startTime !== "11:30" || session.endTime !== "12:10")) {
+          console.log("[storage.migrateData] Uppdaterar Rast 2 till nya tider");
+          return { ...session, startTime: "11:30", endTime: "12:10" };
+        }
+        return session;
+      });
+    }
+    data.version = 2;
+  }
+  
+  // Framtida migreringar läggs till här:
+  // if (data.version === 2) {
+  //   // Migrering från version 2 till 3
+  //   data.version = 3;
+  // }
+  
+  console.log("[storage.migrateData] Data migrerad till version:", data.version);
+  return data;
+};
+
+/**
  * Läser all app-data från localStorage.
  * Om ingen data finns, returneras standardvärden.
+ * Befintlig data bevaras ALLTID och migreras vid behov.
  */
 const loadAppData = (): AppData => {
   try {
     const stored = localStorage.getItem(MAIN_STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsedData = JSON.parse(stored);
+      
+      // Kör migrering om nödvändigt
+      const migratedData = migrateData(parsedData);
+      
+      // Säkerställ att alla fält finns (fyller i saknade med standardvärden)
+      const completeData: AppData = {
+        version: migratedData.version || CURRENT_DATA_VERSION,
+        classes: migratedData.classes || DEFAULT_CLASSES,
+        toys: migratedData.toys || DEFAULT_TOYS,
+        borrowed: migratedData.borrowed || [],
+        timerSettings: migratedData.timerSettings || DEFAULT_TIMER_SETTINGS,
+        paxPoints: migratedData.paxPoints || [],
+        rastTracking: migratedData.rastTracking || null,
+        notReturned: migratedData.notReturned || [],
+        notReturnedStats: migratedData.notReturnedStats || [],
+        adminPassword: migratedData.adminPassword || null,
+        adminPasswordSet: migratedData.adminPasswordSet || false,
+      };
+      
+      // Spara tillbaka migrerad data om version ändrades
+      if (migratedData.version !== parsedData.version) {
+        console.log("[storage.loadAppData] Sparar migrerad data");
+        saveAppData(completeData);
+      }
+      
+      return completeData;
     }
   } catch (error) {
     console.error("Kunde inte läsa app-data från localStorage:", error);
   }
   
   // Om ingen data finns eller vid fel, returnera standardvärden
+  console.log("[storage.loadAppData] Ingen befintlig data - skapar standardvärden");
   return {
+    version: CURRENT_DATA_VERSION,
     classes: DEFAULT_CLASSES,
     toys: DEFAULT_TOYS,
     borrowed: [],
@@ -102,12 +176,23 @@ const loadAppData = (): AppData => {
 /**
  * Sparar all app-data till localStorage under den centrala nyckeln.
  * Denna funktion körs automatiskt varje gång något ändras i appen.
+ * Data säkerställs alltid ha korrekt version innan sparning.
  */
 const saveAppData = (data: AppData): void => {
   try {
-    localStorage.setItem(MAIN_STORAGE_KEY, JSON.stringify(data));
+    // Säkerställ att version alltid är satt
+    const dataToSave = {
+      ...data,
+      version: data.version || CURRENT_DATA_VERSION,
+    };
+    localStorage.setItem(MAIN_STORAGE_KEY, JSON.stringify(dataToSave));
   } catch (error) {
     console.error("Kunde inte spara app-data till localStorage:", error);
+    // Vid lagringsfel, visa varning till användaren
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.error("localStorage är fullt! Data kunde inte sparas.");
+      alert("Varning: Lagringsutrymmet är fullt. Data kunde inte sparas.");
+    }
   }
 };
 
@@ -414,6 +499,7 @@ export const importAllData = (jsonData: string): { success: boolean; error?: str
     
     // SAMMANFOGAD DATA
     const mergedData: AppData = {
+      version: CURRENT_DATA_VERSION, // Använd alltid senaste versionen
       classes: mergedClasses,
       toys: mergedToys,
       borrowed: importedData.borrowed || existingData.borrowed,
