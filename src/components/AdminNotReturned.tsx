@@ -63,16 +63,19 @@ const AdminNotReturned = ({ records, onRefresh }: AdminNotReturnedProps) => {
   const [viewYear, setViewYear] = useState(currentYear);
 
   useEffect(() => {
-    const stats = loadNotReturnedWeekStats();
-    setWeekStats(stats);
+    const loadStats = async () => {
+      const stats = await loadNotReturnedWeekStats();
+      setWeekStats(stats);
+    };
+    loadStats();
   }, [records]);
 
-  const handleRemove = (recordId: string) => {
+  const handleRemove = async (recordId: string) => {
     const record = records.find(r => r.id === recordId);
     
     // Log statistics only when removing the record (final action)
     if (record && record.reason) {
-      addNotReturnedStat(
+      await addNotReturnedStat(
         record.studentId,
         record.studentName,
         record.className,
@@ -82,12 +85,12 @@ const AdminNotReturned = ({ records, onRefresh }: AdminNotReturnedProps) => {
       );
     }
     
-    removeNotReturnedRecord(recordId);
+    await removeNotReturnedRecord(recordId);
     onRefresh();
     toast.success("Post borttagen");
   };
 
-  const handleReasonChange = (recordId: string, reason: 'lost' | 'refused' | 'stolen' | 'other') => {
+  const handleReasonChange = async (recordId: string, reason: 'lost' | 'refused' | 'stolen' | 'other') => {
     const record = records.find(r => r.id === recordId);
     if (!record) return;
     
@@ -99,7 +102,7 @@ const AdminNotReturned = ({ records, onRefresh }: AdminNotReturnedProps) => {
         setTempOtherReason(record?.otherReason || "");
       }
     } else {
-      updateNotReturnedRecord(recordId, { 
+      await updateNotReturnedRecord(recordId, { 
         reason, 
         stolenBy: undefined, 
         otherReason: undefined 
@@ -108,22 +111,22 @@ const AdminNotReturned = ({ records, onRefresh }: AdminNotReturnedProps) => {
       onRefresh();
     }
     
-    updateNotReturnedRecord(recordId, { reason });
+    await updateNotReturnedRecord(recordId, { reason });
     onRefresh();
   };
 
-  const handleStolenByChange = (recordId: string, stolenBy: string) => {
+  const handleStolenByChange = async (recordId: string, stolenBy: string) => {
     setTempStolenBy(stolenBy);
     if (stolenBy.trim()) {
-      updateNotReturnedRecord(recordId, { stolenBy });
+      await updateNotReturnedRecord(recordId, { stolenBy });
       onRefresh();
     }
   };
 
-  const handleOtherReasonChange = (recordId: string, otherReason: string) => {
+  const handleOtherReasonChange = async (recordId: string, otherReason: string) => {
     setTempOtherReason(otherReason);
     if (otherReason.trim()) {
-      updateNotReturnedRecord(recordId, { otherReason });
+      await updateNotReturnedRecord(recordId, { otherReason });
       onRefresh();
     }
   };

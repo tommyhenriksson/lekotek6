@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +27,22 @@ interface AdminViewProps {
 
 const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedRecords, onSaveClasses, onSaveToys, onSaveTimerSettings, onRefreshNotReturned }: AdminViewProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isFirstTime, setIsFirstTime] = useState(!isPasswordSet());
+  const [isFirstTime, setIsFirstTime] = useState(true);
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFirstTimeSetup = () => {
+  // Check if password is set on mount
+  useEffect(() => {
+    const checkPassword = async () => {
+      const passwordSet = await isPasswordSet();
+      setIsFirstTime(!passwordSet);
+    };
+    checkPassword();
+  }, []);
+
+  const handleFirstTimeSetup = async () => {
     if (!newPassword || !confirmPassword) {
       toast.error("Fyll i båda fälten!");
       return;
@@ -46,7 +55,7 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
       toast.error("Lösenordet måste vara minst 4 tecken!");
       return;
     }
-    setAdminPassword(newPassword);
+    await setAdminPassword(newPassword);
     setIsFirstTime(false);
     setIsAuthenticated(true);
     setNewPassword("");
@@ -54,8 +63,9 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
     toast.success("Lösenord skapat!");
   };
 
-  const handleLogin = () => {
-    if (password === getAdminPassword()) {
+  const handleLogin = async () => {
+    const adminPassword = await getAdminPassword();
+    if (password === adminPassword) {
       setIsAuthenticated(true);
       toast.success("Inloggad!");
     } else {
@@ -63,7 +73,7 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
     }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (!newPassword || !confirmPassword) {
       toast.error("Fyll i båda fälten!");
       return;
@@ -76,16 +86,16 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
       toast.error("Lösenordet måste vara minst 4 tecken!");
       return;
     }
-    setAdminPassword(newPassword);
+    await setAdminPassword(newPassword);
     setNewPassword("");
     setConfirmPassword("");
     toast.success("Lösenord ändrat!");
   };
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
     try {
       console.log("[AdminViewNew] Exporterar data...");
-      downloadDataAsFile();
+      await downloadDataAsFile();
       toast.success("Export genomförd! Kontrollera nedladdningar.", {
         duration: 3000,
       });
@@ -106,9 +116,9 @@ const AdminViewNew = ({ classes, toys, timerSettings, paxPoints, notReturnedReco
     console.log("[AdminViewNew] Importerar fil:", file.name);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const content = e.target?.result as string;
-      const result = importAllData(content);
+      const result = await importAllData(content);
       
       if (result.success) {
         toast.success("Import genomförd! Befintlig data bevarad. Sidan laddas om...", {

@@ -1,12 +1,16 @@
 import { Class, Toy, BorrowedItem, TimerSettings, PaxWeekPoints, RastTracking, NotReturnedRecord, NotReturnedWeekStats } from "@/types";
+import * as IDB from "./indexedDB";
 
 // ============================================
-// FAST LAGRINGSNYCKEL FÖR VARDAGLIGT BEVARANDE
+// LAGRINGSNYCKEL FÖR ALL APP-DATA
 // ============================================
-// Denna nyckel används för att lagra ALL app-data i localStorage.
+// Denna nyckel används för att lagra ALL app-data i IndexedDB.
 // Data bevaras även efter att appen publiceras om eller uppdateras i Lovable.
-// Detta är den primära lagringsmetoden för daglig användning.
+// IndexedDB används istället för localStorage för att hantera större datamängder (särskilt bilder).
 const MAIN_STORAGE_KEY = "fritidsAppData";
+
+// Flagga för om migrering från localStorage har körts
+let migrationCompleted = false;
 
 // ============================================
 // DATASTRUKTUR FÖR ALL APP-DATA
@@ -116,18 +120,23 @@ const migrateData = (data: any): AppData => {
 };
 
 /**
- * Läser all app-data från localStorage.
+ * Läser all app-data från IndexedDB (eller localStorage vid första körningen).
  * Om ingen data finns, returneras standardvärden.
  * Befintlig data bevaras ALLTID och migreras vid behov.
  */
-const loadAppData = (): AppData => {
+const loadAppData = async (): Promise<AppData> => {
   try {
-    const stored = localStorage.getItem(MAIN_STORAGE_KEY);
+    // Migrera från localStorage till IndexedDB vid första körningen
+    if (!migrationCompleted && IDB.isIndexedDBAvailable()) {
+      await IDB.migrateFromLocalStorage(MAIN_STORAGE_KEY);
+      migrationCompleted = true;
+    }
+    
+    // Hämta data från IndexedDB
+    const stored = await IDB.getItem(MAIN_STORAGE_KEY);
     if (stored) {
-      const parsedData = JSON.parse(stored);
-      
       // Kör migrering om nödvändigt
-      const migratedData = migrateData(parsedData);
+      const migratedData = migrateData(stored);
       
       // Säkerställ att alla fält finns (fyller i saknade med standardvärden)
       const completeData: AppData = {
@@ -145,15 +154,15 @@ const loadAppData = (): AppData => {
       };
       
       // Spara tillbaka migrerad data om version ändrades
-      if (migratedData.version !== parsedData.version) {
+      if (migratedData.version !== stored.version) {
         console.log("[storage.loadAppData] Sparar migrerad data");
-        saveAppData(completeData);
+        await saveAppData(completeData);
       }
       
       return completeData;
     }
   } catch (error) {
-    console.error("Kunde inte läsa app-data från localStorage:", error);
+    console.error("Kunde inte läsa app-data från IndexedDB:", error);
   }
   
   // Om ingen data finns eller vid fel, returnera standardvärden
@@ -174,25 +183,31 @@ const loadAppData = (): AppData => {
 };
 
 /**
- * Sparar all app-data till localStorage under den centrala nyckeln.
+ * Sparar all app-data till IndexedDB under den centrala nyckeln.
  * Denna funktion körs automatiskt varje gång något ändras i appen.
  * Data säkerställs alltid ha korrekt version innan sparning.
  */
-const saveAppData = (data: AppData): void => {
+const saveAppData = async (data: AppData): Promise<void> => {
   try {
     // Säkerställ att version alltid är satt
     const dataToSave = {
       ...data,
       version: data.version || CURRENT_DATA_VERSION,
     };
-    localStorage.setItem(MAIN_STORAGE_KEY, JSON.stringify(dataToSave));
-  } catch (error) {
-    console.error("Kunde inte spara app-data till localStorage:", error);
-    // Vid lagringsfel, visa varning till användaren
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      console.error("localStorage är fullt! Data kunde inte sparas.");
-      alert("Varning: Lagringsutrymmet är fullt. Data kunde inte sparas.");
+    
+    // Spara till IndexedDB
+    await IDB.setItem(MAIN_STORAGE_KEY, dataToSave);
+    
+    // Spara även till localStorage som backup (om det får plats)
+    try {
+      localStorage.setItem(MAIN_STORAGE_KEY, JSON.stringify(dataToSave));
+    } catch (backupError) {
+      // Om localStorage är fullt, fortsätt ändå - IndexedDB är primär lagring
+      console.warn("[storage.saveAppData] Kunde inte spara backup till localStorage:", backupError);
     }
+  } catch (error) {
+    console.error("Kunde inte spara app-data till IndexedDB:", error);
+    alert("Varning: Data kunde inte sparas. Försök igen.");
   }
 };
 
@@ -200,14 +215,15 @@ const saveAppData = (data: AppData): void => {
 // KLASSER - ELEVER OCH KLASSDATA
 // ============================================
 
-export const loadClasses = (): Class[] => {
-  return loadAppData().classes;
+export const loadClasses = async (): Promise<Class[]> => {
+  const data = await loadAppData();
+  return data.classes;
 };
 
-export const saveClasses = (classes: Class[]): void => {
-  const data = loadAppData();
+export const saveClasses = async (classes: Class[]): Promise<void> => {
+  const data = await loadAppData();
   data.classes = classes;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
 // ============================================
@@ -215,164 +231,173 @@ export const saveClasses = (classes: Class[]): void => {
 // ============================================
 // Bilder sparas som Base64-strängar i toy.image
 
-export const loadToys = (): Toy[] => {
-  return loadAppData().toys;
+export const loadToys = async (): Promise<Toy[]> => {
+  const data = await loadAppData();
+  return data.toys;
 };
 
-export const saveToys = (toys: Toy[]): void => {
+export const saveToys = async (toys: Toy[]): Promise<void> => {
   console.log("[storage.saveToys] Sparar leksaker, antal:", toys.length);
-  const data = loadAppData();
+  const data = await loadAppData();
   data.toys = toys;
-  saveAppData(data);
-  console.log("[storage.saveToys] localStorage uppdaterad med leksaker:", toys.map(t => t.name).join(", "));
+  await saveAppData(data);
+  console.log("[storage.saveToys] IndexedDB uppdaterad med leksaker:", toys.map(t => t.name).join(", "));
 };
 
 // ============================================
 // UTLÅNADE LEKSAKER
 // ============================================
 
-export const loadBorrowedItems = (): BorrowedItem[] => {
-  return loadAppData().borrowed;
+export const loadBorrowedItems = async (): Promise<BorrowedItem[]> => {
+  const data = await loadAppData();
+  return data.borrowed;
 };
 
-export const saveBorrowedItems = (items: BorrowedItem[]): void => {
-  const data = loadAppData();
+export const saveBorrowedItems = async (items: BorrowedItem[]): Promise<void> => {
+  const data = await loadAppData();
   data.borrowed = items;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
 // ============================================
 // ADMIN-LÖSENORD
 // ============================================
 
-export const getAdminPassword = (): string | null => {
-  return loadAppData().adminPassword;
+export const getAdminPassword = async (): Promise<string | null> => {
+  const data = await loadAppData();
+  return data.adminPassword;
 };
 
-export const setAdminPassword = (password: string): void => {
-  const data = loadAppData();
+export const setAdminPassword = async (password: string): Promise<void> => {
+  const data = await loadAppData();
   data.adminPassword = password;
   data.adminPasswordSet = true;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
-export const isPasswordSet = (): boolean => {
-  return loadAppData().adminPasswordSet;
+export const isPasswordSet = async (): Promise<boolean> => {
+  const data = await loadAppData();
+  return data.adminPasswordSet;
 };
 
 // ============================================
 // TIMER-INSTÄLLNINGAR
 // ============================================
 
-export const loadTimerSettings = (): TimerSettings => {
-  return loadAppData().timerSettings;
+export const loadTimerSettings = async (): Promise<TimerSettings> => {
+  const data = await loadAppData();
+  return data.timerSettings;
 };
 
-export const saveTimerSettings = (settings: TimerSettings): void => {
-  const data = loadAppData();
+export const saveTimerSettings = async (settings: TimerSettings): Promise<void> => {
+  const data = await loadAppData();
   data.timerSettings = settings;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
-export const resetTimerSettingsToDefault = (): void => {
-  const data = loadAppData();
+export const resetTimerSettingsToDefault = async (): Promise<void> => {
+  const data = await loadAppData();
   data.timerSettings = DEFAULT_TIMER_SETTINGS;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
 // ============================================
 // PAX-POÄNG
 // ============================================
 
-export const loadPaxPoints = (): PaxWeekPoints[] => {
-  return loadAppData().paxPoints;
+export const loadPaxPoints = async (): Promise<PaxWeekPoints[]> => {
+  const data = await loadAppData();
+  return data.paxPoints;
 };
 
-export const savePaxPoints = (points: PaxWeekPoints[]): void => {
-  const data = loadAppData();
+export const savePaxPoints = async (points: PaxWeekPoints[]): Promise<void> => {
+  const data = await loadAppData();
   data.paxPoints = points;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
 // ============================================
 // RAST-TRACKING
 // ============================================
 
-export const loadRastTracking = (): RastTracking | null => {
-  return loadAppData().rastTracking;
+export const loadRastTracking = async (): Promise<RastTracking | null> => {
+  const data = await loadAppData();
+  return data.rastTracking;
 };
 
-export const saveRastTracking = (tracking: RastTracking): void => {
-  const data = loadAppData();
+export const saveRastTracking = async (tracking: RastTracking): Promise<void> => {
+  const data = await loadAppData();
   data.rastTracking = tracking;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
-export const clearRastTracking = (): void => {
-  const data = loadAppData();
+export const clearRastTracking = async (): Promise<void> => {
+  const data = await loadAppData();
   data.rastTracking = null;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
 // ============================================
 // EJ ÅTERLÄMNADE LEKSAKER - POSTER
 // ============================================
 
-export const loadNotReturnedRecords = (): NotReturnedRecord[] => {
-  return loadAppData().notReturned;
+export const loadNotReturnedRecords = async (): Promise<NotReturnedRecord[]> => {
+  const data = await loadAppData();
+  return data.notReturned;
 };
 
-export const saveNotReturnedRecords = (records: NotReturnedRecord[]): void => {
-  const data = loadAppData();
+export const saveNotReturnedRecords = async (records: NotReturnedRecord[]): Promise<void> => {
+  const data = await loadAppData();
   data.notReturned = records;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
-export const addNotReturnedRecord = (record: NotReturnedRecord): void => {
-  const records = loadNotReturnedRecords();
+export const addNotReturnedRecord = async (record: NotReturnedRecord): Promise<void> => {
+  const records = await loadNotReturnedRecords();
   records.push(record);
-  saveNotReturnedRecords(records);
+  await saveNotReturnedRecords(records);
 };
 
-export const removeNotReturnedRecord = (recordId: string): void => {
-  const records = loadNotReturnedRecords();
+export const removeNotReturnedRecord = async (recordId: string): Promise<void> => {
+  const records = await loadNotReturnedRecords();
   const updated = records.filter(r => r.id !== recordId);
-  saveNotReturnedRecords(updated);
+  await saveNotReturnedRecords(updated);
 };
 
-export const updateNotReturnedRecord = (recordId: string, updates: Partial<NotReturnedRecord>): void => {
-  const records = loadNotReturnedRecords();
+export const updateNotReturnedRecord = async (recordId: string, updates: Partial<NotReturnedRecord>): Promise<void> => {
+  const records = await loadNotReturnedRecords();
   const updated = records.map(r => r.id === recordId ? { ...r, ...updates } : r);
-  saveNotReturnedRecords(updated);
+  await saveNotReturnedRecords(updated);
 };
 
 // ============================================
 // EJ ÅTERLÄMNADE LEKSAKER - VECKOSTATISTIK
 // ============================================
 
-export const loadNotReturnedWeekStats = (): NotReturnedWeekStats[] => {
-  return loadAppData().notReturnedStats;
+export const loadNotReturnedWeekStats = async (): Promise<NotReturnedWeekStats[]> => {
+  const data = await loadAppData();
+  return data.notReturnedStats;
 };
 
-export const saveNotReturnedWeekStats = (stats: NotReturnedWeekStats[]): void => {
-  const data = loadAppData();
+export const saveNotReturnedWeekStats = async (stats: NotReturnedWeekStats[]): Promise<void> => {
+  const data = await loadAppData();
   data.notReturnedStats = stats;
-  saveAppData(data);
+  await saveAppData(data);
 };
 
-export const addNotReturnedStat = (
+export const addNotReturnedStat = async (
   studentId: string,
   studentName: string,
   className: string,
   reason: 'lost' | 'refused' | 'stolen' | 'other',
   stolenBy?: string,
   otherReason?: string
-): void => {
+): Promise<void> => {
   const now = new Date();
   const weekNumber = getWeekNumber(now);
   const year = now.getFullYear();
   
-  const stats = loadNotReturnedWeekStats();
+  const stats = await loadNotReturnedWeekStats();
   let weekData = stats.find(s => s.weekNumber === weekNumber && s.year === year);
   
   if (!weekData) {
@@ -401,7 +426,7 @@ export const addNotReturnedStat = (
     timestamp: now.toISOString(),
   });
   
-  saveNotReturnedWeekStats(stats);
+  await saveNotReturnedWeekStats(stats);
 };
 
 const getWeekNumber = (date: Date): number => {
@@ -421,13 +446,13 @@ const getWeekNumber = (date: Date): number => {
 
 /**
  * Exporterar ALL app-data som en JSON-sträng.
- * LÄSER ALLTID DIREKT FRÅN localStorage för att garantera senaste datan.
+ * LÄSER ALLTID DIREKT FRÅN IndexedDB för att garantera senaste datan.
  */
-export const exportAllData = (): string => {
-  console.log("[storage.exportAllData] Läser data DIREKT från localStorage...");
+export const exportAllData = async (): Promise<string> => {
+  console.log("[storage.exportAllData] Läser data DIREKT från IndexedDB...");
   
-  // Läs alltid direkt från localStorage (inte från cache eller state)
-  const data = loadAppData();
+  // Läs alltid direkt från IndexedDB (inte från cache eller state)
+  const data = await loadAppData();
   
   console.log("[storage.exportAllData] Antal leksaker i export:", data.toys.length);
   console.log("[storage.exportAllData] Leksaker:", data.toys.map(t => t.name).join(", "));
@@ -441,7 +466,7 @@ export const exportAllData = (): string => {
  * Jämför och sammanfogar data istället för att skriva över allt.
  * Skapar automatiskt en backup innan importen genomförs.
  */
-export const importAllData = (jsonData: string): { success: boolean; error?: string } => {
+export const importAllData = async (jsonData: string): Promise<{ success: boolean; error?: string }> => {
   try {
     const importedData = JSON.parse(jsonData);
     
@@ -455,11 +480,12 @@ export const importAllData = (jsonData: string): { success: boolean; error?: str
     // Skapa backup innan import
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupKey = `lekotek-backup-${timestamp}`;
-    localStorage.setItem(backupKey, exportAllData());
-    console.log("[storage.importAllData] Backup skapad:", backupKey);
+    const exportedData = await exportAllData();
+    await IDB.setItem(backupKey, JSON.parse(exportedData));
+    console.log("[storage.importAllData] Backup skapad i IndexedDB:", backupKey);
     
     // Läs befintlig data
-    const existingData = loadAppData();
+    const existingData = await loadAppData();
     
     // SMART SAMMANFOGNING AV LEKSAKER
     // Behåll befintliga leksaker och lägg till nya från importen
@@ -513,7 +539,7 @@ export const importAllData = (jsonData: string): { success: boolean; error?: str
     };
     
     // Spara sammanfogad data
-    saveAppData(mergedData);
+    await saveAppData(mergedData);
     console.log("[storage.importAllData] Import slutförd!");
     
     return { success: true };
@@ -525,13 +551,13 @@ export const importAllData = (jsonData: string): { success: boolean; error?: str
 
 /**
  * Laddar ner all app-data som en JSON-fil till enheten.
- * GARANTERAR att senaste datan från localStorage exporteras.
+ * GARANTERAR att senaste datan från IndexedDB exporteras.
  */
-export const downloadDataAsFile = (): void => {
+export const downloadDataAsFile = async (): Promise<void> => {
   console.log("[storage.downloadDataAsFile] Startar export...");
   
-  // Läs alltid direkt från localStorage för att garantera senaste datan
-  const data = exportAllData();
+  // Läs alltid direkt från IndexedDB för att garantera senaste datan
+  const data = await exportAllData();
   
   const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
   const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '');

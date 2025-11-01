@@ -28,19 +28,29 @@ const Index = () => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [toys, setToys] = useState<Toy[]>([]);
   const [borrowedItems, setBorrowedItems] = useState<BorrowedItem[]>([]);
-  const [timerSettings, setTimerSettings] = useState<TimerSettings>(loadTimerSettings());
+  const [timerSettings, setTimerSettings] = useState<TimerSettings>({
+    sessions: [],
+    timerType: 'digital',
+    warningMinutes: 15,
+    delayMinutes: 30,
+    alarmSound: 'bell',
+    alarmVolume: 80,
+  });
   const [paxPoints, setPaxPoints] = useState<PaxWeekPoints[]>([]);
   const [notReturnedRecords, setNotReturnedRecords] = useState<NotReturnedRecord[]>([]);
 
   // Load data on mount
   // All migrering hanteras nu automatiskt i storage.ts
   useEffect(() => {
-    setClasses(loadClasses());
-    setToys(loadToys());
-    setBorrowedItems(loadBorrowedItems());
-    setTimerSettings(loadTimerSettings());
-    setPaxPoints(loadPaxPoints());
-    setNotReturnedRecords(loadNotReturnedRecords());
+    const loadData = async () => {
+      setClasses(await loadClasses());
+      setToys(await loadToys());
+      setBorrowedItems(await loadBorrowedItems());
+      setTimerSettings(await loadTimerSettings());
+      setPaxPoints(await loadPaxPoints());
+      setNotReturnedRecords(await loadNotReturnedRecords());
+    };
+    loadData();
   }, []);
 
   const getWeekNumber = (date: Date): number => {
@@ -63,7 +73,7 @@ const Index = () => {
     return activeSession?.id || null;
   };
 
-  const handleBorrow = (
+  const handleBorrow = async (
     studentId: string,
     studentName: string,
     toyId: string,
@@ -82,7 +92,7 @@ const Index = () => {
       toy.id === toyId ? { ...toy, quantity: toy.quantity - 1 } : toy
     );
     setToys(updatedToys);
-    saveToys(updatedToys);
+    await saveToys(updatedToys);
 
     // Add borrowed item
     const newBorrowedItem: BorrowedItem = {
@@ -99,7 +109,7 @@ const Index = () => {
     };
     const updatedBorrowed = [...borrowedItems, newBorrowedItem];
     setBorrowedItems(updatedBorrowed);
-    saveBorrowedItems(updatedBorrowed);
+    await saveBorrowedItems(updatedBorrowed);
 
     // Track borrow statistics
     if (studentClass) {
@@ -126,11 +136,11 @@ const Index = () => {
       
       const updatedPaxPoints = [...paxPoints];
       setPaxPoints(updatedPaxPoints);
-      savePaxPoints(updatedPaxPoints);
+      await savePaxPoints(updatedPaxPoints);
     }
   };
 
-  const handleReturn = (itemId: string) => {
+  const handleReturn = async (itemId: string) => {
     const item = borrowedItems.find((b) => b.id === itemId);
     if (!item) return;
 
@@ -139,12 +149,12 @@ const Index = () => {
       toy.id === item.toyId ? { ...toy, quantity: toy.quantity + 1 } : toy
     );
     setToys(updatedToys);
-    saveToys(updatedToys);
+    await saveToys(updatedToys);
 
     // Remove borrowed item
     const updatedBorrowed = borrowedItems.filter((b) => b.id !== itemId);
     setBorrowedItems(updatedBorrowed);
-    saveBorrowedItems(updatedBorrowed);
+    await saveBorrowedItems(updatedBorrowed);
 
     // Track return statistics and PAX Points logic
     const currentWeek = getWeekNumber(new Date());
@@ -174,7 +184,7 @@ const Index = () => {
       const today = new Date().toISOString().split('T')[0];
       
       // Load or create rast tracking
-      let rastTracking = loadRastTracking();
+      let rastTracking = await loadRastTracking();
       
       // Check if we need to reset tracking (new session or new day)
       if (!rastTracking || rastTracking.sessionId !== currentSession || rastTracking.date !== today) {
@@ -189,7 +199,7 @@ const Index = () => {
       if (!rastTracking.studentsWithPoints.includes(item.studentId)) {
         // Award point
         rastTracking.studentsWithPoints.push(item.studentId);
-        saveRastTracking(rastTracking);
+        await saveRastTracking(rastTracking);
         
         // Update points
         weekData.classPoints[item.className] = (weekData.classPoints[item.className] || 0) + 1;
@@ -198,30 +208,30 @@ const Index = () => {
     
     const updatedPaxPoints = [...paxPoints];
     setPaxPoints(updatedPaxPoints);
-    savePaxPoints(updatedPaxPoints);
+    await savePaxPoints(updatedPaxPoints);
   };
 
-  const handleSaveClasses = useCallback((newClasses: Class[]) => {
+  const handleSaveClasses = useCallback(async (newClasses: Class[]) => {
     setClasses(newClasses);
-    saveClasses(newClasses);
+    await saveClasses(newClasses);
   }, []);
 
-  const handleSaveToys = useCallback((newToys: Toy[]) => {
+  const handleSaveToys = useCallback(async (newToys: Toy[]) => {
     console.log("[Index.handleSaveToys] Sparar leksaker, antal:", newToys.length);
     console.log("[Index.handleSaveToys] Leksaker:", newToys.map(t => t.name).join(", "));
     console.log("[Index.handleSaveToys] Leksaker med bilder:", newToys.filter(t => t.image).map(t => `${t.name} (${t.image?.substring(0, 30)}...)`).join(", "));
     setToys(newToys);
-    saveToys(newToys);
-    console.log("[Index.handleSaveToys] localStorage uppdaterad");
+    await saveToys(newToys);
+    console.log("[Index.handleSaveToys] IndexedDB uppdaterad");
   }, []);
 
-  const handleSaveTimerSettings = useCallback((newSettings: TimerSettings) => {
+  const handleSaveTimerSettings = useCallback(async (newSettings: TimerSettings) => {
     setTimerSettings(newSettings);
-    saveTimerSettings(newSettings);
+    await saveTimerSettings(newSettings);
   }, []);
 
-  const handleRefreshNotReturned = () => {
-    setNotReturnedRecords(loadNotReturnedRecords());
+  const handleRefreshNotReturned = async () => {
+    setNotReturnedRecords(await loadNotReturnedRecords());
   };
 
   // Check for students who haven't returned items after delay time following session end
@@ -287,7 +297,7 @@ const Index = () => {
       return timeoutId;
     };
     
-    const performCheck = (session: typeof timerSettings.sessions[0]) => {
+    const performCheck = async (session: typeof timerSettings.sessions[0]) => {
       console.log("[Index] performCheck körs för session:", session.name);
       console.log("[Index] Antal lånade items att kontrollera:", borrowedItems.length);
       
@@ -306,7 +316,7 @@ const Index = () => {
       
       console.log("[Index] Antal elever som inte lämnat tillbaka:", studentMap.size);
       
-      studentMap.forEach((items, studentId) => {
+      for (const [studentId, items] of studentMap.entries()) {
         const firstItem = items[0];
         const record: NotReturnedRecord = {
           id: `${studentId}-${Date.now()}`,
@@ -323,10 +333,10 @@ const Index = () => {
           })),
         };
         console.log("[Index] Lägger till 'Ej lämnat'-record för elev:", firstItem.studentName);
-        addNotReturnedRecord(record);
-      });
+        await addNotReturnedRecord(record);
+      }
       
-      setNotReturnedRecords(loadNotReturnedRecords());
+      setNotReturnedRecords(await loadNotReturnedRecords());
       console.log("[Index] 'Ej lämnat'-records uppdaterade");
     };
     
