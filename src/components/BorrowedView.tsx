@@ -54,7 +54,7 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
   const handleReturnFromNotReturned = (itemId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     onReturn(itemId);
-    toast.success("Leksaken återlämnad");
+    toast.success("Eleven kan låna igen");
     
     // If this was the last borrower for this toy, go back to toy list
     const remainingBorrowers = selectedToy?.borrowers.filter(b => b.id !== itemId);
