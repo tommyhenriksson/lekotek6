@@ -15,7 +15,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { removeNotReturnedRecord } from "@/utils/storage";
 
 interface BorrowedViewProps {
   borrowedItems: BorrowedItem[];
@@ -52,20 +51,15 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
     setSelectedToy(null);
   };
 
-  const handleRemoveNotReturned = (studentId: string, itemId: string, e: React.MouseEvent) => {
+  const handleReturnFromNotReturned = (itemId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const record = notReturnedRecords.find(r => r.studentId === studentId);
-    if (record) {
-      removeNotReturnedRecord(record.id);
-      onReturn(itemId);
-      onRefreshNotReturned();
-      toast.success("Eleven kan nu låna igen");
-      
-      // If this was the last borrower for this toy, go back to toy list
-      const remainingBorrowers = selectedToy?.borrowers.filter(b => b.id !== itemId);
-      if (remainingBorrowers && remainingBorrowers.length === 0) {
-        setSelectedToy(null);
-      }
+    onReturn(itemId);
+    toast.success("Leksaken återlämnad");
+    
+    // If this was the last borrower for this toy, go back to toy list
+    const remainingBorrowers = selectedToy?.borrowers.filter(b => b.id !== itemId);
+    if (remainingBorrowers && remainingBorrowers.length === 0) {
+      setSelectedToy(null);
     }
   };
 
@@ -184,15 +178,15 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
                             </Button>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Ta bort från "Ej lämnat"?</AlertDialogTitle>
+                                <AlertDialogTitle>Lämna tillbaka leksak?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Är du säker på att du vill ta bort {item.studentName} från "Ej lämnat"-listan? Detta kommer att tillåta eleven att låna igen.
+                                  Vill du markera leksaken som återlämnad från {item.studentName}? Eleven kommer fortfarande vara kvar i "Ej lämnat"-fliken.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Avbryt</AlertDialogCancel>
-                                <AlertDialogAction onClick={(e) => handleRemoveNotReturned(item.studentId, item.id, e)}>
-                                  Ta bort
+                                <AlertDialogAction onClick={(e) => handleReturnFromNotReturned(item.id, e)}>
+                                  Lämna tillbaka
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
