@@ -111,8 +111,9 @@ const Index = () => {
     setBorrowedItems(updatedBorrowed);
     await saveBorrowedItems(updatedBorrowed);
 
-    // Track borrow statistics
-    if (studentClass) {
+    // Track borrow statistics ONLY if a session is active
+    const currentSession = getCurrentSession();
+    if (currentSession && studentClass) {
       const currentWeek = getWeekNumber(new Date());
       const currentYear = new Date().getFullYear();
       
@@ -156,31 +157,31 @@ const Index = () => {
     setBorrowedItems(updatedBorrowed);
     await saveBorrowedItems(updatedBorrowed);
 
-    // Track return statistics and PAX Points logic
-    const currentWeek = getWeekNumber(new Date());
-    const currentYear = new Date().getFullYear();
-    
-    let weekData = paxPoints.find(p => p.weekNumber === currentWeek && p.year === currentYear);
-    
-    if (!weekData) {
-      weekData = {
-        weekNumber: currentWeek,
-        year: currentYear,
-        classPoints: {},
-        classBorrows: {},
-        classReturns: {},
-      };
-      paxPoints.push(weekData);
-    }
-    
-    if (!weekData.classBorrows) weekData.classBorrows = {};
-    if (!weekData.classReturns) weekData.classReturns = {};
-    
-    // Track return
-    weekData.classReturns[item.className] = (weekData.classReturns[item.className] || 0) + 1;
-    
+    // Track return statistics and PAX Points logic ONLY if a session is active
     const currentSession = getCurrentSession();
     if (currentSession) {
+      const currentWeek = getWeekNumber(new Date());
+      const currentYear = new Date().getFullYear();
+      
+      let weekData = paxPoints.find(p => p.weekNumber === currentWeek && p.year === currentYear);
+      
+      if (!weekData) {
+        weekData = {
+          weekNumber: currentWeek,
+          year: currentYear,
+          classPoints: {},
+          classBorrows: {},
+          classReturns: {},
+        };
+        paxPoints.push(weekData);
+      }
+      
+      if (!weekData.classBorrows) weekData.classBorrows = {};
+      if (!weekData.classReturns) weekData.classReturns = {};
+      
+      // Track return
+      weekData.classReturns[item.className] = (weekData.classReturns[item.className] || 0) + 1;
+      
       const today = new Date().toISOString().split('T')[0];
       
       // Load or create rast tracking
@@ -204,11 +205,11 @@ const Index = () => {
         // Update points
         weekData.classPoints[item.className] = (weekData.classPoints[item.className] || 0) + 1;
       }
+      
+      const updatedPaxPoints = [...paxPoints];
+      setPaxPoints(updatedPaxPoints);
+      await savePaxPoints(updatedPaxPoints);
     }
-    
-    const updatedPaxPoints = [...paxPoints];
-    setPaxPoints(updatedPaxPoints);
-    await savePaxPoints(updatedPaxPoints);
   };
 
   const handleSaveClasses = useCallback(async (newClasses: Class[]) => {

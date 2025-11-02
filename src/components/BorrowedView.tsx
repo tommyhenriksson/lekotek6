@@ -51,8 +51,21 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
     setSelectedToy(null);
   };
 
-  const handleReturnFromNotReturned = (itemId: string, e: React.MouseEvent) => {
+  const handleReturnFromNotReturned = async (itemId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    const item = borrowedItems.find(b => b.id === itemId);
+    if (!item) return;
+    
+    // Mark the not returned record as resolved so student can borrow again
+    const { updateNotReturnedRecord } = await import("@/utils/storage");
+    const record = notReturnedRecords.find(r => r.studentId === item.studentId);
+    if (record) {
+      await updateNotReturnedRecord(record.id, { resolved: true });
+      onRefreshNotReturned();
+    }
+    
+    // Return the item
     onReturn(itemId);
     toast.success("Eleven kan låna igen");
     

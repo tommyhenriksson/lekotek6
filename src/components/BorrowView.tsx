@@ -46,7 +46,7 @@ const BorrowView = ({ classes, toys, borrowedItems, timerSettings, notReturnedRe
   };
 
   const isStudentNotReturned = (studentId: string) => {
-    return notReturnedRecords.some(record => record.studentId === studentId);
+    return notReturnedRecords.some(record => record.studentId === studentId && !record.resolved);
   };
 
   const handleRemoveNotReturned = (studentId: string, e: React.MouseEvent) => {
@@ -59,7 +59,28 @@ const BorrowView = ({ classes, toys, borrowedItems, timerSettings, notReturnedRe
     }
   };
 
+  const isSessionActive = (): boolean => {
+    const now = currentTime;
+    const currentTotalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+    for (const session of timerSettings.sessions) {
+      if (!session.enabled) continue;
+
+      const [startHour, startMin] = session.startTime.split(":").map(Number);
+      const [endHour, endMin] = session.endTime.split(":").map(Number);
+      const startSeconds = startHour * 3600 + startMin * 60;
+      const endSeconds = endHour * 3600 + endMin * 60;
+
+      if (currentTotalSeconds >= startSeconds && currentTotalSeconds < endSeconds) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const isBorrowingBlocked = (): boolean => {
+    if (!isSessionActive()) return false;
+    
     const now = currentTime;
     const currentTotalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
 

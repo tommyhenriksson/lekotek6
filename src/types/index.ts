@@ -83,6 +83,7 @@ export interface NotReturnedRecord {
   reason?: 'lost' | 'refused' | 'stolen' | 'other';
   stolenBy?: string; // For 'stolen' reason
   otherReason?: string; // For 'other' reason
+  resolved?: boolean; // If true, student can borrow again but record stays in admin
 }
 
 export interface NotReturnedWeekStats {
