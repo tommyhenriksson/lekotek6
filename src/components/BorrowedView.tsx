@@ -165,7 +165,7 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
                             className="rounded-xl w-full cursor-not-allowed"
                             disabled
                           >
-                            Lämnade inte in ❌
+                            Lämnade inte in
                           </Button>
                           <AlertDialog>
                             <Button
