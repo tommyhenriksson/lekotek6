@@ -178,15 +178,15 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
                             </Button>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Lämna tillbaka leksak?</AlertDialogTitle>
+                                <AlertDialogTitle>Vill du låta eleven låna igen?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Vill du markera leksaken som återlämnad från {item.studentName}? Eleven kommer fortfarande vara kvar i "Ej lämnat"-fliken.
+                                  Elevens orsak till ej inlämnad leksak har dokumenterats.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Avbryt</AlertDialogCancel>
                                 <AlertDialogAction onClick={(e) => handleReturnFromNotReturned(item.id, e)}>
-                                  Lämna tillbaka
+                                  Ja
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
