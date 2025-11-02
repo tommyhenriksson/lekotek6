@@ -13,6 +13,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { removeNotReturnedRecord } from "@/utils/storage";
 
@@ -161,20 +162,41 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
                           <Button
                             variant="destructive"
                             size="sm"
-                            className="rounded-xl w-full"
+                            className="rounded-xl w-full cursor-not-allowed"
                             disabled
                           >
-                            Lämnade inte tillbaka
+                            Lämnade inte in ❌
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-xl border border-destructive/40 hover:bg-destructive/20"
-                            onClick={(e) => handleRemoveNotReturned(item.studentId, item.id, e)}
-                            aria-label="Ta bort från Ej inlämnat"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          <AlertDialog>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-xl border border-destructive/40 hover:bg-destructive/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              aria-label="Ta bort från Ej inlämnat"
+                              asChild
+                            >
+                              <AlertDialogTrigger>
+                                <X className="h-4 w-4" />
+                              </AlertDialogTrigger>
+                            </Button>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Ta bort från "Ej lämnat"?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Är du säker på att du vill ta bort {item.studentName} från "Ej lämnat"-listan? Detta kommer att tillåta eleven att låna igen.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                                <AlertDialogAction onClick={(e) => handleRemoveNotReturned(item.studentId, item.id, e)}>
+                                  Ta bort
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       ) : (
                         <Button

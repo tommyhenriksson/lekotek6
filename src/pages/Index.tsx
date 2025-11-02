@@ -241,10 +241,37 @@ const Index = () => {
     console.log("[Index] Aktiva sessioner:", timerSettings.sessions.filter(s => s.enabled).length);
     console.log("[Index] Fördröjning (minuter):", timerSettings.delayMinutes);
     
+    // Perform immediate check for any sessions that should have triggered already
+    const performImmediateCheck = async () => {
+      if (borrowedItems.length === 0) return;
+      
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      for (const session of timerSettings.sessions) {
+        if (!session.enabled) continue;
+        
+        const [endHour, endMinute] = session.endTime.split(':').map(Number);
+        const delayMinutes = timerSettings.delayMinutes || 30;
+        
+        // Calculate check time (session end + delay)
+        const totalMinutes = endHour * 60 + endMinute + delayMinutes;
+        const checkHour = Math.floor(totalMinutes / 60);
+        const checkMinute = totalMinutes % 60;
+        const checkTime = `${String(checkHour).padStart(2, '0')}:${String(checkMinute).padStart(2, '0')}`;
+        
+        // If current time is past check time, perform check for this session
+        if (currentTime >= checkTime && currentTime < "23:59") {
+          console.log("[Index] Omedelbar kontroll för session:", session.name, "Kontrolltid:", checkTime);
+          await performCheck(session);
+        }
+      }
+    };
+    
     const scheduleNextCheck = () => {
       const now = new Date();
       
-      // Hitta nästa session som ska kontrolleras
+      // Find next session to check
       let nextCheckTime: Date | null = null;
       let nextSession: typeof timerSettings.sessions[0] | null = null;
       
@@ -254,7 +281,7 @@ const Index = () => {
         const [endHour, endMinute] = session.endTime.split(':').map(Number);
         const delayMinutes = timerSettings.delayMinutes || 30;
         
-        // Beräkna kontrolltiden (sessionens sluttid + fördröjning)
+        // Calculate check time (session end + delay)
         const totalMinutes = endHour * 60 + endMinute + delayMinutes;
         const checkHour = Math.floor(totalMinutes / 60);
         const checkMinute = totalMinutes % 60;
@@ -262,12 +289,12 @@ const Index = () => {
         const checkTime = new Date();
         checkTime.setHours(checkHour, checkMinute, 0, 0);
         
-        // Om tiden har passerat idag, sätt till imorgon
+        // If time has passed today, set to tomorrow
         if (checkTime <= now) {
           checkTime.setDate(checkTime.getDate() + 1);
         }
         
-        // Spara om detta är närmaste kontrolltiden
+        // Save if this is the nearest check time
         if (!nextCheckTime || checkTime < nextCheckTime) {
           nextCheckTime = checkTime;
           nextSession = session;
@@ -279,7 +306,7 @@ const Index = () => {
         return null;
       }
       
-      // Beräkna hur många millisekunder till nästa kontroll
+      // Calculate milliseconds until next check
       const msUntilCheck = nextCheckTime.getTime() - now.getTime();
       const minutesUntilCheck = Math.round(msUntilCheck / 60000);
       
@@ -287,11 +314,10 @@ const Index = () => {
       console.log("[Index] Kontrolltid:", nextCheckTime.toLocaleString('sv-SE'));
       console.log("[Index] Om (minuter):", minutesUntilCheck);
       
-      // Schemalägga kontrollen
+      // Schedule the check
       const timeoutId = setTimeout(() => {
         console.log("[Index] Kör schemalagd kontroll för session:", nextSession!.name);
         performCheck(nextSession!);
-        // OBS: Vi schemaläggs inte om här - låter useEffect ta hand om det vid nästa state-ändring
       }, msUntilCheck);
       
       return timeoutId;
@@ -306,7 +332,7 @@ const Index = () => {
         return;
       }
       
-      // Gruppera per elev och lägg till records
+      // Group by student and add records
       const studentMap = new Map<string, BorrowedItem[]>();
       borrowedItems.forEach(item => {
         const existing = studentMap.get(item.studentId) || [];
@@ -316,7 +342,16 @@ const Index = () => {
       
       console.log("[Index] Antal elever som inte lämnat tillbaka:", studentMap.size);
       
+      // Check if records already exist to avoid duplicates
+      const existingRecords = await loadNotReturnedRecords();
+      
       for (const [studentId, items] of studentMap.entries()) {
+        // Skip if student already has a not-returned record
+        if (existingRecords.some(r => r.studentId === studentId)) {
+          console.log("[Index] Eleven har redan en 'Ej lämnat'-record, hoppar över:", items[0].studentName);
+          continue;
+        }
+        
         const firstItem = items[0];
         const record: NotReturnedRecord = {
           id: `${studentId}-${Date.now()}`,
@@ -340,6 +375,10 @@ const Index = () => {
       console.log("[Index] 'Ej lämnat'-records uppdaterade");
     };
     
+    // Run immediate check first
+    performImmediateCheck();
+    
+    // Then schedule next check
     const timeoutId = scheduleNextCheck();
     
     return () => {
