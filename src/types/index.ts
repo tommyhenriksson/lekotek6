@@ -83,7 +83,7 @@ export interface NotReturnedRecord {
   reason?: 'lost' | 'refused' | 'stolen' | 'other';
   stolenBy?: string; // For 'stolen' reason
   otherReason?: string; // For 'other' reason
-  resolved?: boolean; // If true, student can borrow again but record stays in admin
+  blockedFromBorrowing?: boolean; // Styrs enbart från Lämna-fliken, påverkar om eleven kan låna
 }
 
 export interface NotReturnedWeekStats {

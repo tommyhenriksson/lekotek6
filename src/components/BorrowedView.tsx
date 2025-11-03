@@ -57,11 +57,11 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
     const item = borrowedItems.find(b => b.id === itemId);
     if (!item) return;
     
-    // Mark the not returned record as resolved so student can borrow again
+    // Unblock student from borrowing (history remains in Admin tab)
     const { updateNotReturnedRecord } = await import("@/utils/storage");
     const record = notReturnedRecords.find(r => r.studentId === item.studentId);
     if (record) {
-      await updateNotReturnedRecord(record.id, { resolved: true });
+      await updateNotReturnedRecord(record.id, { blockedFromBorrowing: false });
       onRefreshNotReturned();
     }
     

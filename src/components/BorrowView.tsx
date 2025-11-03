@@ -46,7 +46,7 @@ const BorrowView = ({ classes, toys, borrowedItems, timerSettings, notReturnedRe
   };
 
   const isStudentNotReturned = (studentId: string) => {
-    return notReturnedRecords.some(record => record.studentId === studentId && !record.resolved);
+    return notReturnedRecords.some(record => record.studentId === studentId && record.blockedFromBorrowing);
   };
 
   const handleRemoveNotReturned = (studentId: string, e: React.MouseEvent) => {

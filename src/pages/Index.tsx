@@ -367,6 +367,7 @@ const Index = () => {
             toyName: item.toyName,
             borrowedAt: item.borrowedAt,
           })),
+          blockedFromBorrowing: true, // Block student from borrowing
         };
         console.log("[Index] Lägger till 'Ej lämnat'-record för elev:", firstItem.studentName);
         await addNotReturnedRecord(record);
