@@ -429,6 +429,43 @@ export const addNotReturnedStat = async (
   await saveNotReturnedWeekStats(stats);
 };
 
+/**
+ * Uppdaterar en befintlig statistikpost när användaren ändrar anledning
+ */
+export const updateNotReturnedStat = async (
+  studentId: string,
+  studentName: string,
+  className: string,
+  reason: 'lost' | 'refused' | 'stolen' | 'other',
+  stolenBy?: string,
+  otherReason?: string
+): Promise<void> => {
+  const now = new Date();
+  const weekNumber = getWeekNumber(now);
+  const year = now.getFullYear();
+  
+  const stats = await loadNotReturnedWeekStats();
+  const weekData = stats.find(s => s.weekNumber === weekNumber && s.year === year);
+  
+  if (!weekData || !weekData.studentStats[studentId]) {
+    // Om det inte finns någon befintlig statistik, skapa ny
+    await addNotReturnedStat(studentId, studentName, className, reason, stolenBy, otherReason);
+    return;
+  }
+  
+  // Hitta den senaste posten för denna elev och uppdatera den
+  const reasons = weekData.studentStats[studentId].reasons;
+  if (reasons.length > 0) {
+    const latestReason = reasons[reasons.length - 1];
+    latestReason.reason = reason;
+    latestReason.stolenBy = stolenBy;
+    latestReason.otherReason = otherReason;
+    latestReason.timestamp = now.toISOString();
+    
+    await saveNotReturnedWeekStats(stats);
+  }
+};
+
 const getWeekNumber = (date: Date): number => {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;

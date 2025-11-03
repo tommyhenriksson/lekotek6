@@ -3,7 +3,7 @@ import { NotReturnedRecord, NotReturnedWeekStats } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2, ChevronLeft, ChevronRight, History } from "lucide-react";
-import { removeNotReturnedRecord, updateNotReturnedRecord, addNotReturnedStat, loadNotReturnedWeekStats } from "@/utils/storage";
+import { removeNotReturnedRecord, updateNotReturnedRecord, addNotReturnedStat, updateNotReturnedStat, loadNotReturnedWeekStats } from "@/utils/storage";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -71,20 +71,7 @@ const AdminNotReturned = ({ records, onRefresh }: AdminNotReturnedProps) => {
   }, [records]);
 
   const handleRemove = async (recordId: string) => {
-    const record = records.find(r => r.id === recordId);
-    
-    // Log statistics only when removing the record (final action)
-    if (record && record.reason) {
-      await addNotReturnedStat(
-        record.studentId,
-        record.studentName,
-        record.className,
-        record.reason,
-        record.stolenBy,
-        record.otherReason
-      );
-    }
-    
+    // Bara ta bort posten - statistiken är redan loggad när anledning valdes
     await removeNotReturnedRecord(recordId);
     onRefresh();
     toast.success("Post borttagen");
@@ -93,6 +80,9 @@ const AdminNotReturned = ({ records, onRefresh }: AdminNotReturnedProps) => {
   const handleReasonChange = async (recordId: string, reason: 'lost' | 'refused' | 'stolen' | 'other') => {
     const record = records.find(r => r.id === recordId);
     if (!record) return;
+    
+    // Om detta är första gången en anledning väljs, logga statistik direkt
+    const isFirstTimeReason = !record.reason;
     
     if (reason === 'stolen' || reason === 'other') {
       setEditingRecordId(recordId);
@@ -108,17 +98,73 @@ const AdminNotReturned = ({ records, onRefresh }: AdminNotReturnedProps) => {
         otherReason: undefined 
       });
       setEditingRecordId(null);
+      
+      // Logga eller uppdatera statistik
+      if (isFirstTimeReason) {
+        await addNotReturnedStat(
+          record.studentId,
+          record.studentName,
+          record.className,
+          reason
+        );
+      } else {
+        await updateNotReturnedStat(
+          record.studentId,
+          record.studentName,
+          record.className,
+          reason
+        );
+      }
+      
       onRefresh();
+      return;
     }
     
     await updateNotReturnedRecord(recordId, { reason });
+    
+    // Logga eller uppdatera statistik för 'stolen' och 'other' anledningar
+    // (kommer att uppdateras när användaren fyller i detaljerna)
+    if (isFirstTimeReason) {
+      await addNotReturnedStat(
+        record.studentId,
+        record.studentName,
+        record.className,
+        reason,
+        record.stolenBy,
+        record.otherReason
+      );
+    } else {
+      await updateNotReturnedStat(
+        record.studentId,
+        record.studentName,
+        record.className,
+        reason,
+        record.stolenBy,
+        record.otherReason
+      );
+    }
+    
     onRefresh();
   };
 
   const handleStolenByChange = async (recordId: string, stolenBy: string) => {
     setTempStolenBy(stolenBy);
     if (stolenBy.trim()) {
+      const record = records.find(r => r.id === recordId);
+      if (!record) return;
+      
       await updateNotReturnedRecord(recordId, { stolenBy });
+      
+      // Uppdatera statistiken med den nya detaljen
+      await updateNotReturnedStat(
+        record.studentId,
+        record.studentName,
+        record.className,
+        'stolen',
+        stolenBy,
+        undefined
+      );
+      
       onRefresh();
     }
   };
@@ -126,7 +172,21 @@ const AdminNotReturned = ({ records, onRefresh }: AdminNotReturnedProps) => {
   const handleOtherReasonChange = async (recordId: string, otherReason: string) => {
     setTempOtherReason(otherReason);
     if (otherReason.trim()) {
+      const record = records.find(r => r.id === recordId);
+      if (!record) return;
+      
       await updateNotReturnedRecord(recordId, { otherReason });
+      
+      // Uppdatera statistiken med den nya detaljen
+      await updateNotReturnedStat(
+        record.studentId,
+        record.studentName,
+        record.className,
+        'other',
+        undefined,
+        otherReason
+      );
+      
       onRefresh();
     }
   };
