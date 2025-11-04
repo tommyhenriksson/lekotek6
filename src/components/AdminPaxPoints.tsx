@@ -102,11 +102,13 @@ const AdminPaxPoints = ({ classes, paxPoints }: AdminPaxPointsProps) => {
             {(() => {
               const totalBorrows = Object.values(weekData?.classBorrows || {}).reduce((sum, count) => sum + count, 0);
               const totalReturns = Object.values(weekData?.classReturns || {}).reduce((sum, count) => sum + count, 0);
-              const overallPercentage = totalBorrows > 0 ? Math.round((totalReturns / totalBorrows) * 100) : 0;
+              // Säkerställ att returns aldrig överstiger borrows och percentage max är 100%
+              const validReturns = Math.min(totalReturns, totalBorrows);
+              const overallPercentage = totalBorrows > 0 ? Math.min(100, Math.round((validReturns / totalBorrows) * 100)) : 0;
               
               const overallChartData = [
-                { name: "returned", value: totalReturns },
-                { name: "notReturned", value: totalBorrows - totalReturns },
+                { name: "returned", value: validReturns },
+                { name: "notReturned", value: totalBorrows - validReturns },
               ];
 
               return totalBorrows > 0 ? (
@@ -137,11 +139,11 @@ const AdminPaxPoints = ({ classes, paxPoints }: AdminPaxPointsProps) => {
                         {overallPercentage}%
                       </div>
                       <div className="text-lg mb-2">
-                        <span className="font-semibold">{totalReturns}</span> inlämnade av{" "}
+                        <span className="font-semibold">{validReturns}</span> inlämnade av{" "}
                         <span className="font-semibold">{totalBorrows}</span> leksaker
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {totalBorrows - totalReturns} ej returnerade
+                        {totalBorrows - validReturns} ej returnerade
                       </div>
                     </div>
                   </div>
@@ -154,11 +156,13 @@ const AdminPaxPoints = ({ classes, paxPoints }: AdminPaxPointsProps) => {
                 const points = weekData?.classPoints[cls.name] || 0;
                 const returns = weekData?.classReturns?.[cls.name] || 0;
                 const borrows = weekData?.classBorrows?.[cls.name] || 0;
-                const percentage = borrows > 0 ? Math.round((returns / borrows) * 100) : 0;
+                // Säkerställ att returns aldrig överstiger borrows och percentage max är 100%
+                const validReturns = Math.min(returns, borrows);
+                const percentage = borrows > 0 ? Math.min(100, Math.round((validReturns / borrows) * 100)) : 0;
                 
                 const chartData = [
-                  { name: "returned", value: returns },
-                  { name: "pending", value: borrows - returns },
+                  { name: "returned", value: validReturns },
+                  { name: "pending", value: borrows - validReturns },
                 ];
 
                 return (
@@ -180,7 +184,7 @@ const AdminPaxPoints = ({ classes, paxPoints }: AdminPaxPointsProps) => {
                           {points} poäng
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          av {returns} poäng
+                          av {validReturns} möjliga
                         </div>
                       </div>
                     </div>
@@ -206,7 +210,7 @@ const AdminPaxPoints = ({ classes, paxPoints }: AdminPaxPointsProps) => {
                       </div>
                       <div className="flex-1">
                         <div className="text-sm text-muted-foreground">
-                          Lämnat in {returns} av {borrows} leksaker
+                          Lämnat in {validReturns} av {borrows} leksaker
                         </div>
                         <div className="text-sm font-medium" style={{ color: cls.color || "#3B82F6" }}>
                           {percentage}% returnerat
