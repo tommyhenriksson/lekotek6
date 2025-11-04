@@ -73,6 +73,48 @@ const Index = () => {
     return activeSession?.id || null;
   };
 
+  // Check if we're past the delay limit for any active session
+  const isPastDelayLimit = (): boolean => {
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // Find the most recent session that has ended
+    let mostRecentSession = null;
+    let mostRecentEndTime = "";
+    
+    for (const session of timerSettings.sessions) {
+      if (!session.enabled) continue;
+      
+      // If we're past this session's end time
+      if (currentTime > session.endTime) {
+        if (!mostRecentSession || session.endTime > mostRecentEndTime) {
+          mostRecentSession = session;
+          mostRecentEndTime = session.endTime;
+        }
+      }
+    }
+    
+    if (!mostRecentSession) return false;
+    
+    // Calculate delay limit for most recent ended session
+    const [endHour, endMinute] = mostRecentSession.endTime.split(':').map(Number);
+    const delayMinutes = timerSettings.delayMinutes || 30;
+    
+    const totalMinutes = endHour * 60 + endMinute + delayMinutes;
+    const limitHour = Math.floor(totalMinutes / 60) % 24;
+    const limitMinute = totalMinutes % 60;
+    const limitTime = `${String(limitHour).padStart(2, '0')}:${String(limitMinute).padStart(2, '0')}`;
+    
+    // Check if we're past the delay limit but before the next session
+    const nextSession = timerSettings.sessions
+      .filter(s => s.enabled && s.startTime > currentTime)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))[0];
+    
+    const beforeNextSession = !nextSession || currentTime < nextSession.startTime;
+    
+    return currentTime >= limitTime && beforeNextSession;
+  };
+
   const handleBorrow = async (
     studentId: string,
     studentName: string,
@@ -145,6 +187,56 @@ const Index = () => {
     const item = borrowedItems.find((b) => b.id === itemId);
     if (!item) return;
 
+    // Check if we're past the delay limit
+    if (isPastDelayLimit()) {
+      console.log("[Index.handleReturn] Förseningsgränsen har passerats - lägger till i 'Ej lämnat'");
+      
+      // Find the current/last active session
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      const relevantSession = timerSettings.sessions.find(session => {
+        if (!session.enabled) return false;
+        const [endHour, endMinute] = session.endTime.split(':').map(Number);
+        const delayMinutes = timerSettings.delayMinutes || 30;
+        const totalMinutes = endHour * 60 + endMinute + delayMinutes;
+        const limitHour = Math.floor(totalMinutes / 60) % 24;
+        const limitMinute = totalMinutes % 60;
+        const limitTime = `${String(limitHour).padStart(2, '0')}:${String(limitMinute).padStart(2, '0')}`;
+        return currentTime >= limitTime;
+      });
+
+      if (relevantSession) {
+        // Check if student already has a not-returned record
+        const existingRecord = notReturnedRecords.find(r => r.studentId === item.studentId);
+        
+        if (!existingRecord) {
+          // Add to not returned records
+          const record: NotReturnedRecord = {
+            id: `${item.studentId}-${Date.now()}`,
+            studentId: item.studentId,
+            studentName: item.studentName,
+            className: item.className,
+            sessionEndTime: relevantSession.endTime,
+            sessionName: relevantSession.name,
+            checkedAt: new Date().toISOString(),
+            borrowedItems: [{
+              toyId: item.toyId,
+              toyName: item.toyName,
+              borrowedAt: item.borrowedAt,
+            }],
+            blockedFromBorrowing: true,
+          };
+          
+          await addNotReturnedRecord(record);
+          setNotReturnedRecords(await loadNotReturnedRecords());
+        }
+      }
+      
+      return; // Don't process return - student is now blocked
+    }
+
+    // Normal return process (within time limit)
     // Increase toy quantity
     const updatedToys = toys.map((toy) =>
       toy.id === item.toyId ? { ...toy, quantity: toy.quantity + 1 } : toy
@@ -409,10 +501,11 @@ const Index = () => {
       
       {activeTab === "borrowed" && (
         <BorrowedView 
-          borrowedItems={borrowedItems} 
+          borrowedItems={borrowedItems}
           notReturnedRecords={notReturnedRecords}
           onRefreshNotReturned={handleRefreshNotReturned}
-          onReturn={handleReturn} 
+          onReturn={handleReturn}
+          isPastDelayLimit={isPastDelayLimit()}
         />
       )}
       

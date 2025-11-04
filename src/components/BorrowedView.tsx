@@ -21,6 +21,7 @@ interface BorrowedViewProps {
   notReturnedRecords: NotReturnedRecord[];
   onRefreshNotReturned: () => void;
   onReturn: (itemId: string) => void;
+  isPastDelayLimit: boolean;
 }
 
 interface GroupedToy {
@@ -31,9 +32,18 @@ interface GroupedToy {
   borrowers: BorrowedItem[];
 }
 
-const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned, onReturn }: BorrowedViewProps) => {
+const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned, onReturn, isPastDelayLimit }: BorrowedViewProps) => {
   const [selectedToy, setSelectedToy] = useState<GroupedToy | null>(null);
   const [confirmReturnItem, setConfirmReturnItem] = useState<BorrowedItem | null>(null);
+
+  // Filter not returned records to only show recent ones (from last 2 hours)
+  // This prevents old records from previous sessions showing red buttons
+  const recentNotReturnedRecords = notReturnedRecords.filter(record => {
+    const checkedAt = new Date(record.checkedAt);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - checkedAt.getTime()) / (1000 * 60 * 60);
+    return hoursDiff < 2; // Only show records from last 2 hours
+  });
 
   const handleReturn = (item: BorrowedItem) => {
     onReturn(item.id);
@@ -59,7 +69,7 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
     
     // Unblock student from borrowing (history remains in Admin tab)
     const { updateNotReturnedRecord } = await import("@/utils/storage");
-    const record = notReturnedRecords.find(r => r.studentId === item.studentId);
+    const record = recentNotReturnedRecords.find(r => r.studentId === item.studentId);
     if (record) {
       await updateNotReturnedRecord(record.id, { blockedFromBorrowing: false });
       onRefreshNotReturned();
@@ -164,7 +174,7 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
                           <p className="text-sm text-muted-foreground">{item.className}</p>
                         </div>
                       </div>
-                      {notReturnedRecords.some(r => r.studentId === item.studentId) ? (
+                      {recentNotReturnedRecords.some(r => r.studentId === item.studentId) ? (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="destructive"
@@ -205,6 +215,15 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
                             </AlertDialogContent>
                           </AlertDialog>
                         </div>
+                      ) : isPastDelayLimit ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="rounded-xl w-full"
+                          onClick={() => setConfirmReturnItem(item)}
+                        >
+                          Försenad - Lämna
+                        </Button>
                       ) : (
                         <Button
                           variant="secondary"
