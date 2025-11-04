@@ -209,14 +209,25 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
                           </AlertDialog>
                         </div>
                       ) : isPastDelayLimit ? (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="rounded-xl w-full"
-                          onClick={() => setConfirmReturnItem(item)}
-                        >
-                          Försenad - Lämna
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="rounded-xl w-full"
+                            onClick={() => setConfirmReturnItem(item)}
+                          >
+                            Försenad - Lämna
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-xl border border-destructive/40 hover:bg-destructive/20"
+                            onClick={() => setConfirmReturnItem(item)}
+                            aria-label="Försenad återlämning"
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       ) : (
                         <Button
                           variant="secondary"
@@ -238,17 +249,25 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
       <AlertDialog open={!!confirmReturnItem} onOpenChange={(open) => !open && setConfirmReturnItem(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Lämna tillbaka leksak?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isPastDelayLimit ? "För sent att lämna tillbaka" : "Lämna tillbaka leksak?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmReturnItem && (
-                <>Vill {confirmReturnItem.studentName} lämna tillbaka {confirmReturnItem.toyName}?</>
+                isPastDelayLimit ? (
+                  <>
+                    Förseningsgränsen har passerats. {confirmReturnItem.studentName} kommer att registreras under "Ej lämnat" och blockeras från att låna fler leksaker denna rast.
+                  </>
+                ) : (
+                  <>Vill {confirmReturnItem.studentName} lämna tillbaka {confirmReturnItem.toyName}?</>
+                )
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Avbryt</AlertDialogCancel>
             <AlertDialogAction onClick={() => confirmReturnItem && handleReturn(confirmReturnItem)}>
-              Lämna tillbaka
+              {isPastDelayLimit ? "Okej, registrera" : "Lämna tillbaka"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
