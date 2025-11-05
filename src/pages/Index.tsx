@@ -91,7 +91,12 @@ const Index = () => {
       
       if (!borrowSession) return false;
       
-      // Calculate delay limit for this specific session
+      // First check: Session must be ended
+      if (currentTime <= borrowSession.endTime) {
+        return false; // Session is still active, cannot be delayed yet
+      }
+      
+      // Second check: We must be past the delay limit for this session
       const [endHour, endMinute] = borrowSession.endTime.split(':').map(Number);
       const delayMinutes = timerSettings.delayMinutes || 30;
       
@@ -107,19 +112,20 @@ const Index = () => {
     for (const session of timerSettings.sessions) {
       if (!session.enabled) continue;
       
-      // If we're past this session's end time
-      if (currentTime > session.endTime) {
-        const [endHour, endMinute] = session.endTime.split(':').map(Number);
-        const delayMinutes = timerSettings.delayMinutes || 30;
-        
-        const totalMinutes = endHour * 60 + endMinute + delayMinutes;
-        const limitHour = Math.floor(totalMinutes / 60) % 24;
-        const limitMinute = totalMinutes % 60;
-        const limitTime = `${String(limitHour).padStart(2, '0')}:${String(limitMinute).padStart(2, '0')}`;
-        
-        if (currentTime >= limitTime) {
-          return true;
-        }
+      // Session must be ended first
+      if (currentTime <= session.endTime) continue;
+      
+      // Calculate delay limit
+      const [endHour, endMinute] = session.endTime.split(':').map(Number);
+      const delayMinutes = timerSettings.delayMinutes || 30;
+      
+      const totalMinutes = endHour * 60 + endMinute + delayMinutes;
+      const limitHour = Math.floor(totalMinutes / 60) % 24;
+      const limitMinute = totalMinutes % 60;
+      const limitTime = `${String(limitHour).padStart(2, '0')}:${String(limitMinute).padStart(2, '0')}`;
+      
+      if (currentTime >= limitTime) {
+        return true;
       }
     }
     
