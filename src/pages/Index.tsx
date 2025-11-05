@@ -73,46 +73,57 @@ const Index = () => {
     return activeSession?.id || null;
   };
 
-  // Check if we're past the delay limit for any active session
-  const isPastDelayLimit = (): boolean => {
+  // Check if an item is past its delay limit based on when it was borrowed
+  const isPastDelayLimit = (borrowedItem?: BorrowedItem): boolean => {
     const now = new Date();
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
-    // Find the most recent session that has ended
-    let mostRecentSession = null;
-    let mostRecentEndTime = "";
+    if (borrowedItem) {
+      // For a specific item, check if it's past the delay limit for its session
+      const borrowedAt = new Date(borrowedItem.borrowedAt);
+      const borrowedTimeStr = `${String(borrowedAt.getHours()).padStart(2, '0')}:${String(borrowedAt.getMinutes()).padStart(2, '0')}`;
+      
+      // Find which session the item was borrowed during
+      const borrowSession = timerSettings.sessions.find(session => {
+        if (!session.enabled) return false;
+        return borrowedTimeStr >= session.startTime && borrowedTimeStr <= session.endTime;
+      });
+      
+      if (!borrowSession) return false;
+      
+      // Calculate delay limit for this specific session
+      const [endHour, endMinute] = borrowSession.endTime.split(':').map(Number);
+      const delayMinutes = timerSettings.delayMinutes || 30;
+      
+      const totalMinutes = endHour * 60 + endMinute + delayMinutes;
+      const limitHour = Math.floor(totalMinutes / 60) % 24;
+      const limitMinute = totalMinutes % 60;
+      const limitTime = `${String(limitHour).padStart(2, '0')}:${String(limitMinute).padStart(2, '0')}`;
+      
+      return currentTime >= limitTime;
+    }
     
+    // Without a specific item, check if ANY session's delay limit has passed
     for (const session of timerSettings.sessions) {
       if (!session.enabled) continue;
       
       // If we're past this session's end time
       if (currentTime > session.endTime) {
-        if (!mostRecentSession || session.endTime > mostRecentEndTime) {
-          mostRecentSession = session;
-          mostRecentEndTime = session.endTime;
+        const [endHour, endMinute] = session.endTime.split(':').map(Number);
+        const delayMinutes = timerSettings.delayMinutes || 30;
+        
+        const totalMinutes = endHour * 60 + endMinute + delayMinutes;
+        const limitHour = Math.floor(totalMinutes / 60) % 24;
+        const limitMinute = totalMinutes % 60;
+        const limitTime = `${String(limitHour).padStart(2, '0')}:${String(limitMinute).padStart(2, '0')}`;
+        
+        if (currentTime >= limitTime) {
+          return true;
         }
       }
     }
     
-    if (!mostRecentSession) return false;
-    
-    // Calculate delay limit for most recent ended session
-    const [endHour, endMinute] = mostRecentSession.endTime.split(':').map(Number);
-    const delayMinutes = timerSettings.delayMinutes || 30;
-    
-    const totalMinutes = endHour * 60 + endMinute + delayMinutes;
-    const limitHour = Math.floor(totalMinutes / 60) % 24;
-    const limitMinute = totalMinutes % 60;
-    const limitTime = `${String(limitHour).padStart(2, '0')}:${String(limitMinute).padStart(2, '0')}`;
-    
-    // Check if we're past the delay limit but before the next session
-    const nextSession = timerSettings.sessions
-      .filter(s => s.enabled && s.startTime > currentTime)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime))[0];
-    
-    const beforeNextSession = !nextSession || currentTime < nextSession.startTime;
-    
-    return currentTime >= limitTime && beforeNextSession;
+    return false;
   };
 
   const handleBorrow = async (
@@ -187,8 +198,8 @@ const Index = () => {
     const item = borrowedItems.find((b) => b.id === itemId);
     if (!item) return;
 
-    // Check if we're past the delay limit
-    if (isPastDelayLimit()) {
+    // Check if this specific item is past the delay limit
+    if (isPastDelayLimit(item)) {
       console.log("[Index.handleReturn] Förseningsgränsen har passerats - lägger till i 'Ej lämnat'");
       
       // Find the current/last active session
@@ -505,7 +516,7 @@ const Index = () => {
           notReturnedRecords={notReturnedRecords}
           onRefreshNotReturned={handleRefreshNotReturned}
           onReturn={handleReturn}
-          isPastDelayLimit={isPastDelayLimit()}
+          isPastDelayLimit={isPastDelayLimit}
         />
       )}
       

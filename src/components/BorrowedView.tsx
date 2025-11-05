@@ -21,7 +21,7 @@ interface BorrowedViewProps {
   notReturnedRecords: NotReturnedRecord[];
   onRefreshNotReturned: () => void;
   onReturn: (itemId: string) => void;
-  isPastDelayLimit: boolean;
+  isPastDelayLimit: (borrowedItem?: BorrowedItem) => boolean;
 }
 
 interface GroupedToy {
@@ -155,6 +155,7 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
               .map((item) => {
                 const textColor = item.classColor || "#8B5CF6";
                 const bgColor = `${textColor}1A`;
+                const isItemPastDelayLimit = isPastDelayLimit(item);
                 
                 return (
                   <Card key={item.id} className="p-4 rounded-xl" style={{ backgroundColor: bgColor }}>
@@ -208,7 +209,7 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
                             </AlertDialogContent>
                           </AlertDialog>
                         </div>
-                      ) : isPastDelayLimit ? (
+                      ) : isItemPastDelayLimit ? (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="destructive"
@@ -250,11 +251,11 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {isPastDelayLimit ? "För sent att lämna tillbaka" : "Lämna tillbaka leksak?"}
+              {confirmReturnItem && isPastDelayLimit(confirmReturnItem) ? "För sent att lämna tillbaka" : "Lämna tillbaka leksak?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmReturnItem && (
-                isPastDelayLimit ? (
+                isPastDelayLimit(confirmReturnItem) ? (
                   <>
                     Förseningsgränsen har passerats. {confirmReturnItem.studentName} kommer att registreras under "Ej lämnat" och blockeras från att låna fler leksaker denna rast.
                   </>
@@ -267,7 +268,7 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
           <AlertDialogFooter>
             <AlertDialogCancel>Avbryt</AlertDialogCancel>
             <AlertDialogAction onClick={() => confirmReturnItem && handleReturn(confirmReturnItem)}>
-              {isPastDelayLimit ? "Okej, registrera" : "Lämna tillbaka"}
+              {confirmReturnItem && isPastDelayLimit(confirmReturnItem) ? "Okej, registrera" : "Lämna tillbaka"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
