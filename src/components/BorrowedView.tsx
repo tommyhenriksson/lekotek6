@@ -217,7 +217,7 @@ const BorrowedView = ({ borrowedItems, notReturnedRecords, onRefreshNotReturned,
                             className="rounded-xl w-full"
                             onClick={() => setConfirmReturnItem(item)}
                           >
-                            Försenad - Lämna
+                            Lämnade inte in
                           </Button>
                           <Button
                             variant="ghost"
