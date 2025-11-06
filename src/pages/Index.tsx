@@ -73,58 +73,60 @@ const Index = () => {
     return activeSession?.id || null;
   };
 
+  // Helper function to convert HH:MM to minutes from midnight
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
   // Check if an item is past its delay limit based on when it was borrowed
   const isPastDelayLimit = (borrowedItem?: BorrowedItem): boolean => {
     const now = new Date();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
     
     if (borrowedItem) {
       // For a specific item, check if it's past the delay limit for its session
       const borrowedAt = new Date(borrowedItem.borrowedAt);
-      const borrowedTimeStr = `${String(borrowedAt.getHours()).padStart(2, '0')}:${String(borrowedAt.getMinutes()).padStart(2, '0')}`;
+      const borrowedMinutes = borrowedAt.getHours() * 60 + borrowedAt.getMinutes();
       
       // Find which session the item was borrowed during
       const borrowSession = timerSettings.sessions.find(session => {
         if (!session.enabled) return false;
-        return borrowedTimeStr >= session.startTime && borrowedTimeStr <= session.endTime;
+        const startMinutes = timeToMinutes(session.startTime);
+        const endMinutes = timeToMinutes(session.endTime);
+        return borrowedMinutes >= startMinutes && borrowedMinutes <= endMinutes;
       });
       
+      // If item wasn't borrowed during a session, no delay limit applies
       if (!borrowSession) return false;
       
-      // First check: Session must be ended
-      if (currentTime <= borrowSession.endTime) {
+      // Check if session has ended
+      const sessionEndMinutes = timeToMinutes(borrowSession.endTime);
+      if (currentMinutes <= sessionEndMinutes) {
         return false; // Session is still active, cannot be delayed yet
       }
       
-      // Second check: We must be past the delay limit for this session
-      const [endHour, endMinute] = borrowSession.endTime.split(':').map(Number);
+      // Check if we're past the delay limit for this session
       const delayMinutes = timerSettings.delayMinutes || 30;
+      const delayLimitMinutes = sessionEndMinutes + delayMinutes;
       
-      const totalMinutes = endHour * 60 + endMinute + delayMinutes;
-      const limitHour = Math.floor(totalMinutes / 60) % 24;
-      const limitMinute = totalMinutes % 60;
-      const limitTime = `${String(limitHour).padStart(2, '0')}:${String(limitMinute).padStart(2, '0')}`;
-      
-      return currentTime >= limitTime;
+      return currentMinutes >= delayLimitMinutes;
     }
     
     // Without a specific item, check if ANY session's delay limit has passed
     for (const session of timerSettings.sessions) {
       if (!session.enabled) continue;
       
+      const sessionEndMinutes = timeToMinutes(session.endTime);
+      
       // Session must be ended first
-      if (currentTime <= session.endTime) continue;
+      if (currentMinutes <= sessionEndMinutes) continue;
       
-      // Calculate delay limit
-      const [endHour, endMinute] = session.endTime.split(':').map(Number);
+      // Check if delay limit has passed
       const delayMinutes = timerSettings.delayMinutes || 30;
+      const delayLimitMinutes = sessionEndMinutes + delayMinutes;
       
-      const totalMinutes = endHour * 60 + endMinute + delayMinutes;
-      const limitHour = Math.floor(totalMinutes / 60) % 24;
-      const limitMinute = totalMinutes % 60;
-      const limitTime = `${String(limitHour).padStart(2, '0')}:${String(limitMinute).padStart(2, '0')}`;
-      
-      if (currentTime >= limitTime) {
+      if (currentMinutes >= delayLimitMinutes) {
         return true;
       }
     }
